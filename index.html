@@ -1,25 +1,3 @@
-// ╔══════════════════════════════════════════════════════════╗
-// ║  NEXUS ERP — AI Dashboard Intelligence                   ║
-// ║  BUGS FIXED:                                             ║
-// ║  [1] T.surface undefined → unified to T.card            ║
-// ║  [2] animation:"pulse…" inline → moved to CSS class     ║
-// ║  [3] GitHub CORS → API key panel added                  ║
-// ║  [4] Added useEffect, useMemo imports                   ║
-// ║  [5] ScatterChart imported & implemented                ║
-// ║  [6] PptxGenJS null-check added                         ║
-// ║  [7] JSON parse fallback improved                       ║
-// ║  FEATURES ADDED:                                         ║
-// ║  • Slider: min-value threshold filter on charts         ║
-// ║  • Slider: data range (how many points to show)         ║
-// ║  • Per-chart type switcher (6 types)                    ║
-// ║  • KPI card click-to-highlight + filter                 ║
-// ║  • Insight type filter chips                            ║
-// ║  • Animated KPI counters (count-up on load)             ║
-// ║  • KPI progress bar fill                                ║
-// ║  • Searchable data table                                ║
-// ╚══════════════════════════════════════════════════════════╝
-
-// BUG FIX [4]: Added useEffect + useMemo to imports
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
 import {
@@ -27,11 +5,11 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, RadarChart, Radar,
   PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  // BUG FIX [5]: ScatterChart was missing from imports
-  ScatterChart, Scatter, ZAxis,
+  ScatterChart, Scatter, ZAxis, Treemap,
+  RadialBarChart, RadialBar, ComposedChart,
 } from "recharts";
 
-// ── CDN loader for PptxGenJS ──────────────────────────────────────────────────
+// ── CDN loader ───────────────────────────────────────────────────────────────
 function loadScript(src) {
   return new Promise((res, rej) => {
     if (document.querySelector(`script[src="${src}"]`)) return res();
@@ -41,104 +19,134 @@ function loadScript(src) {
   });
 }
 
-// ── Theme — BUG FIX [1]: Removed T.surface. Everything uses T.card ───────────
+// ── Theme ────────────────────────────────────────────────────────────────────
 const T = {
-  bg:     "#07090F",
-  card:   "#0F1825",   // ← was split into surface/card; unified here
-  border: "#192840",
-  accent: "#00C2FF",
-  accent2:"#8B5CF6",
-  accent3:"#10B981",
-  warn:   "#F97316",
-  danger: "#EF4444",
-  text:   "#E2EBF6",
-  muted:  "#4A6585",
-  subtle: "#243650",
-  colors: ["#00C2FF","#8B5CF6","#10B981","#F97316","#F59E0B","#EF4444","#06D6A0","#3B82F6","#EC4899","#14B8A6"],
+  bg: "#05080F", card: "#0C1420", border: "#162035",
+  accent: "#00D4FF", accent2: "#7C3AED", accent3: "#00C896",
+  warn: "#FF8C42", danger: "#FF4757", gold: "#FFD700",
+  text: "#DCE8F8", muted: "#3D5A80", subtle: "#1A2D45",
+  colors: ["#00D4FF","#7C3AED","#00C896","#FF8C42","#FFD700","#FF4757","#06D6A0","#3B82F6","#F472B6","#A78BFA","#34D399","#FB923C"],
 };
 
-// ── CSS — BUG FIX [2]: pulse moved from inline style to CSS class ─────────────
+// ── CSS ──────────────────────────────────────────────────────────────────────
 const STYLE = `
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:${T.bg};font-family:'Plus Jakarta Sans',sans-serif;color:${T.text};overflow-x:hidden;min-height:100vh}
-::-webkit-scrollbar{width:4px;height:4px}
+html,body{background:${T.bg};font-family:'Sora',sans-serif;color:${T.text};overflow-x:hidden;min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:${T.bg}}
 ::-webkit-scrollbar-thumb{background:${T.border};border-radius:4px}
-@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+::-webkit-scrollbar-thumb:hover{background:${T.muted}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* BUG FIX [2]: was inline style animation:"pulse 1.5s infinite" — React ignores shorthand */
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.au {animation:fadeUp .4s ease both}
-.au1{animation:fadeUp .4s ease both;animation-delay:.07s}
-.au2{animation:fadeUp .4s ease both;animation-delay:.14s}
-.au3{animation:fadeUp .4s ease both;animation-delay:.21s}
-.au4{animation:fadeUp .4s ease both;animation-delay:.28s}
-.spin{animation:spin .9s linear infinite}
-.pulse-dot{animation:pulse 1.5s ease infinite}
-.card{background:${T.card};border:1px solid ${T.border};border-radius:13px;transition:border-color .18s,box-shadow .18s}
-.kpi-card{position:relative;overflow:hidden;background:${T.card};border:1px solid ${T.border};border-radius:13px;cursor:pointer;transition:all .2s}
-.kpi-card:hover{border-color:${T.accent}55;transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,194,255,.09)}
-.kpi-card.selected{border-color:${T.accent};box-shadow:0 0 0 1px ${T.accent}33,0 8px 28px rgba(0,194,255,.14)}
-.glass{background:rgba(255,255,255,.025);border:1px solid ${T.border};border-radius:11px;backdrop-filter:blur(14px)}
-.mono{font-family:'IBM Plex Mono',monospace}
-.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:100px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
-.tab-btn{padding:7px 16px;background:transparent;border:1px solid transparent;border-radius:7px 7px 0 0;border-bottom:none;color:${T.muted};font-size:12.5px;font-weight:400;cursor:pointer;transition:.12s;text-transform:capitalize;font-family:inherit}
-.tab-btn:hover{color:${T.text}}
-.tab-btn.on{background:${T.accent}12;border-color:${T.accent}44;color:${T.accent};font-weight:600}
-.chip{padding:5px 12px;border-radius:100px;border:1px solid ${T.border};font-size:11.5px;font-weight:500;cursor:pointer;transition:.13s;background:transparent;font-family:inherit;color:${T.muted};white-space:nowrap}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes glow{0%,100%{box-shadow:0 0 8px ${T.accent}44}50%{box-shadow:0 0 22px ${T.accent}88}}
+@keyframes countUp{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.au{animation:fadeUp .45s cubic-bezier(.22,1,.36,1) both}
+.au1{animation:fadeUp .45s cubic-bezier(.22,1,.36,1) both;animation-delay:.08s}
+.au2{animation:fadeUp .45s cubic-bezier(.22,1,.36,1) both;animation-delay:.16s}
+.au3{animation:fadeUp .45s cubic-bezier(.22,1,.36,1) both;animation-delay:.24s}
+.au4{animation:fadeUp .45s cubic-bezier(.22,1,.36,1) both;animation-delay:.32s}
+.spin{animation:spin .85s linear infinite}
+.pulse-dot{animation:pulse 1.6s ease infinite}
+.card{background:${T.card};border:1px solid ${T.border};border-radius:14px;transition:border-color .2s,box-shadow .2s}
+.card:hover{border-color:${T.subtle}}
+.kpi-card{position:relative;overflow:hidden;background:${T.card};border:1px solid ${T.border};border-radius:14px;cursor:pointer;transition:all .22s}
+.kpi-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,212,255,.08)}
+.kpi-card.selected{border-color:${T.accent};box-shadow:0 0 0 1px ${T.accent}33,0 12px 32px rgba(0,212,255,.12)}
+.chip{padding:5px 13px;border-radius:100px;border:1px solid ${T.border};font-size:11.5px;font-weight:500;cursor:pointer;transition:.14s;background:transparent;font-family:inherit;color:${T.muted};white-space:nowrap}
 .chip:hover{color:${T.text};border-color:${T.subtle}}
-.chip.on{border-color:var(--cc,${T.accent})66;background:color-mix(in srgb,var(--cc,${T.accent}) 12%,transparent);color:var(--cc,${T.accent})}
-.ctype-btn{padding:4px 8px;border-radius:5px;border:1px solid ${T.border};background:transparent;color:${T.muted};font-family:inherit;font-size:10.5px;cursor:pointer;transition:.12s;font-weight:500}
-.ctype-btn.on{border-color:${T.accent}55;color:${T.accent};background:${T.accent}10}
-.ctype-btn:hover:not(.on){color:${T.text}}
-.range-slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:${T.border};outline:none;cursor:pointer}
-.range-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:${T.accent};cursor:pointer;border:2.5px solid ${T.bg};box-shadow:0 0 0 2px ${T.accent}44;transition:.13s}
+.chip.on{border-color:var(--cc,${T.accent})66;background:color-mix(in srgb,var(--cc,${T.accent}) 13%,transparent);color:var(--cc,${T.accent})}
+.tab-btn{padding:8px 18px;background:transparent;border:1px solid transparent;border-radius:9px 9px 0 0;border-bottom:none;color:${T.muted};font-size:12px;font-weight:500;cursor:pointer;transition:.14s;text-transform:capitalize;font-family:inherit;white-space:nowrap}
+.tab-btn:hover{color:${T.text}}
+.tab-btn.on{background:${T.accent}0F;border-color:${T.accent}44;color:${T.accent};font-weight:700}
+.ctype-btn{padding:4px 9px;border-radius:6px;border:1px solid ${T.border};background:transparent;color:${T.muted};font-family:inherit;font-size:10px;cursor:pointer;transition:.13s;font-weight:600;letter-spacing:.02em}
+.ctype-btn.on{border-color:${T.accent}55;color:${T.accent};background:${T.accent}0E}
+.ctype-btn:hover:not(.on){color:${T.text};border-color:${T.subtle}}
+.range-slider{-webkit-appearance:none;appearance:none;width:100%;height:3px;border-radius:2px;background:${T.border};outline:none;cursor:pointer}
+.range-slider::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:${T.accent};cursor:pointer;border:2px solid ${T.bg};box-shadow:0 0 0 2.5px ${T.accent}44;transition:.13s}
 .range-slider::-webkit-slider-thumb:hover{transform:scale(1.2)}
-.range-slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:${T.accent};cursor:pointer;border:2.5px solid ${T.bg};box-shadow:0 0 0 2px ${T.accent}44}
-.btn-ghost{background:rgba(255,255,255,.025);border:1px solid ${T.border};border-radius:8px;color:${T.text};font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer;transition:.13s;display:flex;align-items:center;gap:6px;white-space:nowrap;padding:7px 14px}
+.btn-ghost{background:rgba(255,255,255,.022);border:1px solid ${T.border};border-radius:9px;color:${T.text};font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer;transition:.14s;display:flex;align-items:center;gap:6px;white-space:nowrap;padding:7px 15px}
 .btn-ghost:hover{border-color:${T.subtle};background:rgba(255,255,255,.04)}
-.btn-ghost.key-set{border-color:${T.accent3}44;color:${T.accent3}}
+.btn-ghost.key-set{border-color:${T.accent3}55;color:${T.accent3}}
+.btn-primary{background:linear-gradient(135deg,${T.accent},${T.accent2});border:none;border-radius:10px;color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;padding:13px 28px;letter-spacing:.02em}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 28px ${T.accent}44}
+.btn-primary:disabled{background:${T.border};color:${T.muted};cursor:not-allowed;transform:none;box-shadow:none}
 .field{background:${T.card};border:1px solid ${T.border};border-radius:9px;color:${T.text};font-family:inherit;outline:none;transition:border-color .16s;width:100%}
-.field:focus{border-color:${T.accent}66}
+.field:focus{border-color:${T.accent}77}
 .field::placeholder{color:${T.muted}}
-input[type=range]{font-family:inherit}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
+.mono{font-family:'JetBrains Mono',monospace}
+.glass{background:rgba(255,255,255,.022);border:1px solid ${T.border};border-radius:12px;backdrop-filter:blur(12px)}
 table{border-collapse:collapse;width:100%}
-th{text-align:left;font-size:10px;color:${T.muted};text-transform:uppercase;letter-spacing:.06em;font-weight:700;padding:6px 12px;white-space:nowrap;background:${T.card}}
-td{padding:7px 12px;font-size:12.5px;border-top:1px solid ${T.border}22;transition:background .1s}
-tr:hover td{background:rgba(255,255,255,.018)}
+th{text-align:left;font-size:9.5px;color:${T.muted};text-transform:uppercase;letter-spacing:.07em;font-weight:700;padding:7px 13px;white-space:nowrap;background:${T.card}}
+td{padding:8px 13px;font-size:12.5px;border-top:1px solid ${T.border}22;transition:background .1s}
+tr:hover td{background:rgba(255,255,255,.016)}
+.shimmer{background:linear-gradient(90deg,${T.card} 25%,${T.subtle} 50%,${T.card} 75%);background-size:200% 100%;animation:shimmer 1.8s infinite}
 `;
 
 // ── Departments ───────────────────────────────────────────────────────────────
 const DEPTS = [
-  {id:"sales",      label:"Sales",        icon:"📈", color:"#00C2FF"},
-  {id:"hr",         label:"HR & People",  icon:"👥", color:"#8B5CF6"},
-  {id:"operations", label:"Operations",   icon:"⚙️", color:"#10B981"},
-  {id:"finance",    label:"Finance",      icon:"💰", color:"#F59E0B"},
-  {id:"marketing",  label:"Marketing",    icon:"📣", color:"#F97316"},
-  {id:"supply",     label:"Supply Chain", icon:"🚚", color:"#06D6A0"},
-  {id:"it",         label:"IT & Tech",    icon:"💻", color:"#EF4444"},
-  {id:"executive",  label:"Executive",    icon:"🏢", color:"#3B82F6"},
+  {id:"sales",label:"Sales",icon:"📈",color:"#00D4FF"},
+  {id:"hr",label:"HR & People",icon:"👥",color:"#7C3AED"},
+  {id:"operations",label:"Operations",icon:"⚙️",color:"#00C896"},
+  {id:"finance",label:"Finance",icon:"💰",color:"#FFD700"},
+  {id:"marketing",label:"Marketing",icon:"📣",color:"#FF8C42"},
+  {id:"supply",label:"Supply Chain",icon:"🚚",color:"#06D6A0"},
+  {id:"it",label:"IT & Tech",icon:"💻",color:"#FF4757"},
+  {id:"executive",label:"Executive",icon:"🏢",color:"#3B82F6"},
 ];
 
-// ── Excel / CSV parser ────────────────────────────────────────────────────────
-function parseExcelFile(file) {
+// ── Chart type catalog ────────────────────────────────────────────────────────
+const CHART_TYPES = [
+  {id:"area",label:"Area",icon:"〰"},
+  {id:"line",label:"Line",icon:"∿"},
+  {id:"bar",label:"Bar",icon:"▌"},
+  {id:"hbar",label:"H-Bar",icon:"━"},
+  {id:"stackbar",label:"Stack",icon:"▐"},
+  {id:"pie",label:"Pie",icon:"◉"},
+  {id:"donut",label:"Donut",icon:"○"},
+  {id:"semipie",label:"Semi",icon:"◗"},
+  {id:"scatter",label:"Scatter",icon:"⠿"},
+  {id:"bubble",label:"Bubble",icon:"⊙"},
+  {id:"radar",label:"Radar",icon:"⬡"},
+  {id:"treemap",label:"Tree",icon:"▦"},
+  {id:"radialbar",label:"Radial",icon:"◎"},
+  {id:"gauge",label:"Gauge",icon:"⊛"},
+  {id:"heatmap",label:"Heat",icon:"▩"},
+  {id:"funnel",label:"Funnel",icon:"▽"},
+  {id:"waterfall",label:"Fall",icon:"⇣"},
+  {id:"composed",label:"Combo",icon:"⊕"},
+  {id:"progressring",label:"Ring",icon:"◉"},
+  {id:"stackarea",label:"S.Area",icon:"≋"},
+];
+
+// ── File parser ───────────────────────────────────────────────────────────────
+async function parseFile(file) {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".pdf")) {
+    return parsePDF(file);
+  }
+  return parseExcel(file);
+}
+
+function parseExcel(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const data = new Uint8Array(e.target.result);
-        const wb   = XLSX.read(data, { type:"array", cellDates:true, raw:false });
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type:"array", cellDates:true, raw:false });
         const sheets = {};
         let totalRows = 0;
         wb.SheetNames.forEach(name => {
-          const ws  = wb.Sheets[name];
+          const ws = wb.Sheets[name];
           const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:"", blankrows:false });
-          const json= XLSX.utils.sheet_to_json(ws, { defval:"" });
+          const json = XLSX.utils.sheet_to_json(ws, { defval:"" });
           sheets[name] = { raw, json, rowCount: raw.length };
           totalRows += raw.length;
         });
-        resolve({ sheets, sheetNames: wb.SheetNames, totalRows, fileName: file.name });
+        resolve({ sheets, sheetNames: wb.SheetNames, totalRows, fileName: file.name, type:"spreadsheet" });
       } catch(err){ reject(err); }
     };
     reader.onerror = reject;
@@ -146,21 +154,52 @@ function parseExcelFile(file) {
   });
 }
 
-function sheetToText(sheetData, maxRows = 35) {
-  const { raw } = sheetData;
-  let out = "";
-  raw.slice(0, maxRows).forEach((row, i) => {
-    const line = row.filter(c => c !== "" && c != null).join(" | ");
-    if (line.trim()) out += `Row${i+1}: ${line}\n`;
-  });
-  if (raw.length > maxRows) out += `... (${raw.length - maxRows} more rows)\n`;
-  return out;
+async function parsePDF(file) {
+  try {
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      const ab = await file.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument({ data: ab }).promise;
+      let text = "";
+      for (let i = 1; i <= Math.min(pdf.numPages, 30); i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map(x => x.str).join(" ") + "\n";
+      }
+      return {
+        sheets: { "PDF Content": { raw: text.split("\n").map((l,i)=>[`Line ${i+1}`, l]).slice(0,200), json: [], rowCount: text.split("\n").length } },
+        sheetNames: ["PDF Content"], totalRows: text.split("\n").length,
+        fileName: file.name, type: "pdf", rawText: text.slice(0, 6000)
+      };
+    }
+  } catch { /* fallback */ }
+  // Fallback: read as text
+  const text = await file.text().catch(()=>"");
+  return {
+    sheets: { "PDF Text": { raw: [], json: [], rowCount: 0 } },
+    sheetNames: ["PDF Text"], totalRows: 0,
+    fileName: file.name, type:"pdf", rawText: text.slice(0,4000)
+  };
 }
 
-// ── Claude API — BUG FIX [3]: apiKey param for GitHub Pages CORS ─────────────
+function sheetToText(sheetData, maxRows = 40) {
+  const { raw } = sheetData;
+  if (!raw?.length) return "";
+  return raw.slice(0, maxRows)
+    .map((row, i) => `Row${i+1}: ${row.filter(c=>c!=="").join(" | ")}`)
+    .filter(l=>l.length > 8)
+    .join("\n") + (raw.length > maxRows ? `\n...(${raw.length - maxRows} more rows)` : "");
+}
+
+// ── Claude API — FIX: anthropic-dangerous-direct-browser-access header ───────
 async function callClaude(system, user, maxTokens = 4500, apiKey = "") {
-  const headers = { "Content-Type": "application/json" };
-  // Only add x-api-key if provided (avoids 400 error when key is empty in artifact)
+  const headers = {
+    "Content-Type": "application/json",
+    "anthropic-dangerous-direct-browser-access": "true",
+    "anthropic-version": "2023-06-01",
+  };
   if (apiKey) headers["x-api-key"] = apiKey;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -173,490 +212,683 @@ async function callClaude(system, user, maxTokens = 4500, apiKey = "") {
       messages: [{ role:"user", content: user }],
     }),
   });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(()=>({}));
+    const msg = errData.error?.message || `HTTP ${res.status}`;
+    if (res.status === 401) throw new Error("Invalid API key. Set your key via the 🔑 button.");
+    if (res.status === 403) throw new Error("API access denied. For GitHub Pages: set your Anthropic API key via the 🔑 button.");
+    throw new Error(msg);
+  }
   const d = await res.json();
-  if (d.error) throw new Error(d.error.message || `API error ${res.status} — check your API key`);
+  if (d.error) throw new Error(d.error.message);
   return d.content?.[0]?.text ?? "";
 }
 
-// ── EXPORT: Excel ─────────────────────────────────────────────────────────────
-function exportToExcel(dashboard, parsedFile) {
+// ── Exports ───────────────────────────────────────────────────────────────────
+function exportExcel(dashboard, parsedFile) {
   const wb = XLSX.utils.book_new();
-  const app = (ws, name) => XLSX.utils.book_append_sheet(wb, ws, name);
-
-  const ws1 = XLSX.utils.aoa_to_sheet([
+  const app = (ws, name) => XLSX.utils.book_append_sheet(wb, ws, name.slice(0,31));
+  app(XLSX.utils.aoa_to_sheet([
     ["NEXUS ERP — AI Dashboard Report"],
-    ["Department", dashboard.department?.toUpperCase()??""],[" Title",dashboard.title??""],[" Period",dashboard.period??""],[" Generated",dashboard.generatedAt??""],
-    [],[" EXECUTIVE SUMMARY"],[dashboard.executiveSummary??""],[],["CFO NARRATIVE"],[dashboard.narrative??""],
-  ]);
-  ws1["!cols"]=[{wch:22},{wch:90}]; app(ws1,"Executive Summary");
-
-  const ws2 = XLSX.utils.aoa_to_sheet([
-    ["#","Metric","Value","Unit","Trend","Change"],
-    ...(dashboard.kpis??[]).map((k,i)=>[i+1,k.label,k.value,k.unit,k.trend,k.change]),
-  ]);
-  ws2["!cols"]=[{wch:4},{wch:30},{wch:16},{wch:12},{wch:10},{wch:16}]; app(ws2,"KPI Dashboard");
-
-  const chartRows=[["Chart Title","Category / Label","Primary Value","Secondary Value"]];
-  (dashboard.charts??[]).forEach(c=>{
-    (c.data??[]).forEach(d=>chartRows.push([c.title,d.name,d.value,d.secondary??""]));
-    chartRows.push([]);
-  });
-  const ws3=XLSX.utils.aoa_to_sheet(chartRows);
-  ws3["!cols"]=[{wch:32},{wch:24},{wch:18},{wch:18}]; app(ws3,"Chart Data");
-
-  const ws4=XLSX.utils.aoa_to_sheet([
-    ["TYPE","INSIGHT TEXT"],
-    ...(dashboard.insights??[]).map(i=>[i.type?.toUpperCase(),`${i.icon??""} ${i.text}`]),
-    [],[" RECOMMENDATIONS"],
+    ["Dept", dashboard.department], ["Title", dashboard.title],
+    ["Period", dashboard.period], ["Generated", dashboard.generatedAt],
+    [], ["Executive Summary"], [dashboard.executiveSummary], [],
+    ["CFO Narrative"], [dashboard.narrative],
+  ]), "Summary");
+  app(XLSX.utils.aoa_to_sheet([
+    ["Metric","Value","Unit","Trend","Change"],
+    ...(dashboard.kpis??[]).map(k=>[k.label,k.value,k.unit,k.trend,k.change]),
+  ]), "KPIs");
+  const chartRows = [["Chart","Label","Value","Secondary"]];
+  (dashboard.charts??[]).forEach(c=>(c.data??[]).forEach(d=>chartRows.push([c.title,d.name,d.value,d.secondary??""])));
+  app(XLSX.utils.aoa_to_sheet(chartRows), "Charts");
+  app(XLSX.utils.aoa_to_sheet([
+    ["Type","Insight"],
+    ...(dashboard.insights??[]).map(i=>[i.type, `${i.icon||""} ${i.text}`]),
+    [], ["Recommendations"],
     ...(dashboard.recommendations??[]).map((r,i)=>[`#${i+1}`,r]),
-  ]);
-  ws4["!cols"]=[{wch:18},{wch:90}]; app(ws4,"Insights & Actions");
-
+  ]), "Insights");
   if (parsedFile) {
-    Object.entries(parsedFile.sheets).slice(0,4).forEach(([name,sheet])=>{
-      if (sheet.raw?.length>0) app(XLSX.utils.aoa_to_sheet(sheet.raw),`Src: ${name}`.slice(0,31));
+    Object.entries(parsedFile.sheets).slice(0,3).forEach(([name,s])=>{
+      if (s.raw?.length) app(XLSX.utils.aoa_to_sheet(s.raw), `Src: ${name}`);
     });
   }
-  XLSX.writeFile(wb,`nexus-${dashboard.department}-report-${Date.now()}.xlsx`);
+  XLSX.writeFile(wb, `nexus-${dashboard.department||"report"}-${Date.now()}.xlsx`);
 }
 
-// ── EXPORT: PDF ───────────────────────────────────────────────────────────────
-function exportToPDF(dashboard) {
-  const dept = DEPTS.find(d=>d.id===dashboard.department)??DEPTS[0];
-  const kpiCards=(dashboard.kpis??[]).map((k,i)=>`
-    <div style="display:inline-block;vertical-align:top;width:calc(25% - 10px);margin:5px;background:#f8faff;border-radius:10px;padding:14px 12px;border-top:3px solid ${T.colors[i%10]}">
-      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;margin-bottom:5px">${k.label}</div>
-      <div style="font-size:22px;font-weight:800;color:#111">${k.value}<span style="font-size:11px;color:#9ca3af">${k.unit&&k.unit!=="units"?" "+k.unit:""}</span></div>
+function exportPDF(dashboard) {
+  const dept = DEPTS.find(d=>d.id===dashboard.department) ?? DEPTS[0];
+  const kpiHtml = (dashboard.kpis??[]).map((k,i)=>`
+    <div style="display:inline-block;vertical-align:top;width:calc(25%-10px);min-width:160px;margin:5px;background:#f8faff;border-radius:10px;padding:14px 12px;border-top:3px solid ${T.colors[i%12]}">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#6b7280;margin-bottom:4px">${k.label}</div>
+      <div style="font-size:20px;font-weight:800;color:#111">${k.value}<span style="font-size:11px;color:#9ca3af">${k.unit&&k.unit!=="units"?" "+k.unit:""}</span></div>
       <div style="font-size:11px;margin-top:3px;font-weight:700;color:${k.trend==="up"?"#10b981":k.trend==="down"?"#ef4444":"#6b7280"}">${k.trend==="up"?"▲":k.trend==="down"?"▼":"→"} ${k.change}</div>
     </div>`).join("");
-  const insHtml=(dashboard.insights??[]).map(ins=>`
-    <div style="padding:9px 13px;margin:5px 0;border-left:3px solid ${ins.type==="positive"?"#10b981":ins.type==="negative"?"#ef4444":ins.type==="alert"?"#f97316":"#3b82f6"};background:#f9fafb;border-radius:0 7px 7px 0;font-size:12px;line-height:1.6">
+  const insHtml = (dashboard.insights??[]).map(ins=>`
+    <div style="padding:10px 14px;margin:6px 0;border-left:3px solid ${ins.type==="positive"?"#10b981":ins.type==="negative"?"#ef4444":ins.type==="alert"?"#f97316":"#3b82f6"};background:#f9fafb;border-radius:0 8px 8px 0;font-size:12px">
       <b style="font-size:9px;text-transform:uppercase;color:${ins.type==="positive"?"#10b981":ins.type==="negative"?"#ef4444":ins.type==="alert"?"#f97316":"#3b82f6"}">${ins.type}</b>
-      <p style="margin:2px 0 0;color:#374151">${ins.icon??"📊"} ${ins.text}</p>
+      <p style="margin:3px 0 0;color:#374151">${ins.icon||"📊"} ${ins.text}</p>
     </div>`).join("");
-  const recHtml=(dashboard.recommendations??[]).map((r,i)=>`
-    <div style="display:flex;gap:9px;padding:9px 11px;margin:5px 0;background:#f0fdf4;border-radius:7px;font-size:12px">
-      <span style="background:#10b981;color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;flex-shrink:0">${i+1}</span>
+  const recHtml = (dashboard.recommendations??[]).map((r,i)=>`
+    <div style="display:flex;gap:10px;padding:10px 12px;margin:5px 0;background:#f0fdf4;border-radius:8px;font-size:12px">
+      <span style="background:#10b981;color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0">${i+1}</span>
       <span>${r}</span>
     </div>`).join("");
-  const chartTbls=(dashboard.charts??[]).map(c=>`
-    <div style="break-inside:avoid;margin-bottom:14px">
+  const chartTbls = (dashboard.charts??[]).map(c=>`
+    <div style="break-inside:avoid;margin-bottom:16px">
       <b style="font-size:12px;display:block;margin-bottom:5px;border-bottom:1px solid #e5e7eb;padding-bottom:3px">${c.title}</b>
       <table style="width:100%;border-collapse:collapse;font-size:11px">
-        <thead><tr style="background:#f3f4f6"><th style="text-align:left;padding:4px 7px;border:1px solid #e5e7eb">Label</th><th style="text-align:right;padding:4px 7px;border:1px solid #e5e7eb">Value</th></tr></thead>
-        <tbody>${(c.data??[]).map((d,j)=>`<tr style="background:${j%2?"#f9fafb":"#fff"}"><td style="padding:3px 7px;border:1px solid #e5e7eb">${d.name}</td><td style="padding:3px 7px;border:1px solid #e5e7eb;text-align:right;font-weight:600">${d.value}</td></tr>`).join("")}</tbody>
+        <thead><tr style="background:#f3f4f6"><th style="text-align:left;padding:4px 8px;border:1px solid #e5e7eb">Label</th><th style="text-align:right;padding:4px 8px;border:1px solid #e5e7eb">Value</th></tr></thead>
+        <tbody>${(c.data??[]).map((d,j)=>`<tr style="background:${j%2?"#f9fafb":"#fff"}"><td style="padding:4px 8px;border:1px solid #e5e7eb">${d.name}</td><td style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:600">${d.value}</td></tr>`).join("")}</tbody>
       </table>
     </div>`).join("");
-  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${dashboard.title}</title>
-<style>@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-*{box-sizing:border-box}body{font-family:'Plus Jakarta Sans',Arial,sans-serif;margin:0;color:#111;font-size:13px}
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${dashboard.title||"Report"}</title>
+<style>@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap');
+*{box-sizing:border-box}body{font-family:'Sora',Arial,sans-serif;margin:0;color:#111;font-size:13px}
 .w{max-width:1050px;margin:0 auto;padding:36px 44px}h2{font-size:15px;font-weight:700;color:#1d4ed8;margin:20px 0 9px;border-bottom:1.5px solid #dbeafe;padding-bottom:4px}
 @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.np{display:none}@page{margin:1.2cm;size:A4}}</style></head>
 <body><div class="w">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;padding-bottom:16px;border-bottom:3px solid #1d4ed8">
     <div><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#6b7280">${dept.icon} ${dept.label?.toUpperCase()}</div>
     <h1 style="margin:4px 0;font-size:22px;font-weight:800">${dashboard.title}</h1>
-    <div style="color:#6b7280;font-size:11px">Period: ${dashboard.period} · ${dashboard.generatedAt}</div></div>
-    <div style="background:#1d4ed8;color:#fff;padding:12px 18px;border-radius:9px;text-align:center;flex-shrink:0"><div style="font-size:9px;opacity:.8">NEXUS ERP</div><div style="font-size:15px;font-weight:800">AI REPORT</div></div>
+    <div style="color:#6b7280;font-size:11px">${dashboard.period} · ${dashboard.generatedAt}</div></div>
+    <div style="background:#1d4ed8;color:#fff;padding:12px 18px;border-radius:9px;text-align:center"><div style="font-size:9px;opacity:.8">NEXUS ERP</div><div style="font-size:15px;font-weight:800">AI REPORT</div></div>
   </div>
   <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:14px 17px;margin-bottom:18px;font-size:13px;line-height:1.8;color:#1e3a5f"><b>Executive Summary:</b> ${dashboard.executiveSummary}</div>
-  <h2>📊 KPIs</h2><div>${kpiCards}</div><div style="clear:both;height:8px"></div>
-  <h2>💡 Insights</h2>${insHtml}
+  <h2>📊 KPI Dashboard</h2><div>${kpiHtml}</div><div style="clear:both;height:12px"></div>
+  <h2>💡 AI Insights</h2>${insHtml}
   <h2>🎯 Recommendations</h2>${recHtml}
   <h2>📈 Chart Data</h2><div style="columns:2;gap:18px">${chartTbls}</div>
-  <h2>📝 CFO Narrative</h2><p style="line-height:1.9;background:#f9fafb;padding:13px;border-radius:8px">${dashboard.narrative}</p>
-  <div style="margin-top:32px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;display:flex;justify-content:space-between"><span>NEXUS ERP · RAG Model</span><span>Confidential · ${dashboard.generatedAt}</span></div>
+  <h2>📝 CFO Narrative</h2><p style="line-height:1.9;background:#f9fafb;padding:14px;border-radius:8px">${dashboard.narrative}</p>
+  <div style="margin-top:32px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;display:flex;justify-content:space-between"><span>NEXUS ERP · AI Dashboard</span><span>Confidential · ${dashboard.generatedAt}</span></div>
 </div>
 <div class="np" style="text-align:center;padding:16px;background:#f3f4f6;border-top:1px solid #e5e7eb">
-  <button onclick="window.print()" style="padding:11px 26px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-right:8px;font-family:inherit">🖨️ Save as PDF</button>
-  <button onclick="window.close()" style="padding:11px 18px;background:#e5e7eb;color:#374151;border:none;border-radius:8px;cursor:pointer;font-family:inherit">✕ Close</button>
+  <button onclick="window.print()" style="padding:12px 28px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-right:8px">🖨️ Save as PDF</button>
+  <button onclick="window.close()" style="padding:12px 18px;background:#e5e7eb;color:#374151;border:none;border-radius:8px;cursor:pointer">✕ Close</button>
 </div></body></html>`;
-  const w=window.open("","_blank","width=1100,height=800");
-  if(w){w.document.write(html);w.document.close();}
-  else alert("Pop-up blocked — allow pop-ups and retry.");
+  const w = window.open("","_blank","width=1100,height=820");
+  if (w) { w.document.write(html); w.document.close(); }
+  else alert("Pop-up blocked — allow pop-ups for PDF export.");
 }
 
-// ── EXPORT: PPTX — BUG FIX [6]: null check after CDN load ───────────────────
-async function exportToPPTX(dashboard) {
-  try {
-    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundled.js");
-  } catch {
-    throw new Error("Could not load PptxGenJS — check your internet connection.");
-  }
-  // BUG FIX [6]: was missing this check — crashes if CDN is blocked
-  if (!window.PptxGenJS) throw new Error("PptxGenJS failed to initialise.");
-
+async function exportPPTX(dashboard) {
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundled.js");
+  if (!window.PptxGenJS) throw new Error("PptxGenJS failed to load.");
   const pptx = new window.PptxGenJS();
-  pptx.layout="LAYOUT_WIDE"; pptx.title=dashboard.title;
-  const dept=DEPTS.find(d=>d.id===dashboard.department)??DEPTS[0];
-  const D="07090F",C="0F1825",BR="192840",AC="00C2FF",PU="8B5CF6",GR="10B981",MU="4A6585",WH="E2EBF6",WA="F97316";
-  const cc=["00C2FF","8B5CF6","10B981","F97316","F59E0B","EF4444","06D6A0","3B82F6","EC4899","14B8A6"];
-  const hdrSlide=(s,label,color=AC)=>{
-    s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:13.33,h:1.05,fill:{color:C},line:{color:C}});
-    s.addText(label,{x:.45,y:.15,w:12,fontSize:10,bold:true,color,charSpacing:5});
-    s.addText(dashboard.title,{x:.45,y:.45,w:12,fontSize:17,bold:true,color:WH});
+  pptx.layout = "LAYOUT_WIDE"; pptx.title = dashboard.title;
+  const dept = DEPTS.find(d=>d.id===dashboard.department) ?? DEPTS[0];
+  const BG="05080F",CA="0C1420",BR="162035",AC="00D4FF",PU="7C3AED",GR="00C896",WH="DCE8F8",MU="3D5A80",WA="FF8C42";
+  const cc=["00D4FF","7C3AED","00C896","FF8C42","FFD700","FF4757","06D6A0","3B82F6","F472B6","A78BFA"];
+
+  const addHeader=(s,label,col=AC)=>{
+    s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:13.33,h:.95,fill:{color:CA},line:{color:CA}});
+    s.addShape(pptx.ShapeType.rect,{x:0,y:.95,w:13.33,h:.03,fill:{color:col},line:{color:col}});
+    s.addText(label,{x:.4,y:.12,w:12,fontSize:9,bold:true,color:col,charSpacing:5});
+    s.addText(dashboard.title,{x:.4,y:.38,w:12,fontSize:16,bold:true,color:WH});
   };
+
   // Slide 1 — Title
-  const s1=pptx.addSlide(); s1.background={color:D};
-  s1.addShape(pptx.ShapeType.rect,{x:0,y:0,w:"100%",h:"100%",fill:{color:C},line:{color:C}});
-  s1.addShape(pptx.ShapeType.rect,{x:0,y:3.6,w:13.33,h:.06,fill:{color:AC},line:{color:AC}});
-  s1.addShape(pptx.ShapeType.rect,{x:0,y:0,w:.14,h:7.5,fill:{color:AC},line:{color:AC}});
-  s1.addText("NEXUS ERP  ·  AI DASHBOARD INTELLIGENCE",{x:.4,y:.3,w:10,fontSize:10,bold:true,color:AC,charSpacing:5});
-  s1.addText(`${dept.icon}  ${dept.label?.toUpperCase()} DEPARTMENT`,{x:.4,y:.7,w:9,fontSize:10,bold:true,color:MU,charSpacing:3});
-  s1.addText(dashboard.title,{x:.4,y:1.15,w:11.2,fontSize:32,bold:true,color:WH});
-  s1.addText(`Period: ${dashboard.period}  ·  Generated: ${dashboard.generatedAt}`,{x:.4,y:3.2,w:9,fontSize:11,color:MU});
-  s1.addShape(pptx.ShapeType.rect,{x:10,y:.3,w:2.9,h:.78,fill:{color:"0D2144"},line:{color:AC,width:1},rounding:true});
-  s1.addText("AI REPORT",{x:10,y:.42,w:2.9,fontSize:14,bold:true,color:WH,align:"center"});
-  s1.addText(dashboard.summary??"",{x:.4,y:4.1,w:12.5,fontSize:13,color:"8BA5C0",lineSpacingMultiple:1.45});
-  s1.addText("CONFIDENTIAL · BOARD OF DIRECTORS",{x:.4,y:6.95,w:12.5,fontSize:8,color:"2A3A50",align:"center",charSpacing:4});
+  const s1=pptx.addSlide(); s1.background={color:BG};
+  s1.addShape(pptx.ShapeType.rect,{x:0,y:0,w:"100%",h:"100%",fill:{color:CA},line:{color:CA}});
+  s1.addShape(pptx.ShapeType.rect,{x:0,y:3.5,w:13.33,h:.04,fill:{color:AC},line:{color:AC}});
+  s1.addText("NEXUS ERP  ·  AI DASHBOARD INTELLIGENCE",{x:.4,y:.25,w:10,fontSize:9,bold:true,color:AC,charSpacing:5});
+  s1.addText(`${dept.icon}  ${dept.label?.toUpperCase()||""} DEPARTMENT`,{x:.4,y:.6,w:10,fontSize:9,bold:true,color:MU,charSpacing:3});
+  s1.addText(dashboard.title||"",{x:.4,y:1.1,w:11,fontSize:30,bold:true,color:WH});
+  s1.addText(`Period: ${dashboard.period||""}  ·  ${dashboard.generatedAt||""}`,{x:.4,y:3.1,w:9,fontSize:10,color:MU});
+  s1.addText(dashboard.summary||"",{x:.4,y:3.9,w:12.5,fontSize:12,color:"7A9CC0",lineSpacingMultiple:1.5});
+  s1.addText("CONFIDENTIAL",{x:.4,y:7.0,w:12.5,fontSize:8,color:"1A2D45",align:"center",charSpacing:4});
+
   // Slide 2 — KPIs
-  const s2=pptx.addSlide(); s2.background={color:D};
-  hdrSlide(s2,"KEY PERFORMANCE INDICATORS",AC);
+  const s2=pptx.addSlide(); s2.background={color:BG};
+  addHeader(s2,"KEY PERFORMANCE INDICATORS",AC);
   (dashboard.kpis??[]).slice(0,8).forEach((k,i)=>{
-    const col=i%4,row=Math.floor(i/4),x=.3+col*3.15,y=1.2+row*1.55,cw=2.95,ch=1.38;
-    s2.addShape(pptx.ShapeType.rect,{x,y,w:cw,h:ch,fill:{color:C},line:{color:BR,width:.8},rounding:true});
-    s2.addShape(pptx.ShapeType.rect,{x,y,w:cw,h:.055,fill:{color:cc[i%10]},line:{color:cc[i%10]},rounding:true});
-    s2.addText(k.label?.toUpperCase()??"",{x:x+.14,y:y+.13,w:cw-.28,fontSize:7.5,bold:true,color:MU,charSpacing:1.5});
-    s2.addText(`${k.value}${k.unit&&k.unit!=="units"?" "+k.unit:""}`,{x:x+.12,y:y+.34,w:cw-.24,fontSize:21,bold:true,color:WH});
-    s2.addText(`${k.trend==="up"?"▲":k.trend==="down"?"▼":"→"}  ${k.change??""}`,{x:x+.12,y:y+1.05,w:cw-.24,fontSize:11,bold:true,color:k.trend==="up"?GR:k.trend==="down"?"EF4444":MU});
+    const col=i%4,row=Math.floor(i/4),x=.3+col*3.15,y=1.1+row*1.5;
+    s2.addShape(pptx.ShapeType.rect,{x,y,w:2.95,h:1.32,fill:{color:CA},line:{color:BR,width:.8},rounding:true});
+    s2.addShape(pptx.ShapeType.rect,{x,y,w:2.95,h:.05,fill:{color:cc[i%10]},line:{color:cc[i%10]}});
+    s2.addText((k.label||"").toUpperCase(),{x:x+.12,y:y+.12,w:2.7,fontSize:7,bold:true,color:MU,charSpacing:1.5});
+    s2.addText(`${k.value}${k.unit&&k.unit!=="units"?" "+k.unit:""}`,{x:x+.1,y:y+.33,w:2.7,fontSize:20,bold:true,color:WH});
+    s2.addText(`${k.trend==="up"?"▲":k.trend==="down"?"▼":"→"}  ${k.change||""}`,{x:x+.1,y:y+.98,w:2.7,fontSize:10,bold:true,color:k.trend==="up"?GR:k.trend==="down"?"EF4444":MU});
   });
-  // Slide 3 — Chart Tables
-  const s3=pptx.addSlide(); s3.background={color:D};
-  hdrSlide(s3,"ANALYTICS & CHART DATA",PU);
-  [{x:.3,y:1.15},{x:6.85,y:1.15},{x:.3,y:4.1},{x:6.85,y:4.1}].forEach((pos,ci)=>{
+
+  // Slide 3 — Charts Data
+  const s3=pptx.addSlide(); s3.background={color:BG};
+  addHeader(s3,"ANALYTICS & CHART DATA",PU);
+  [{x:.3,y:1.1},{x:6.85,y:1.1},{x:.3,y:3.9},{x:6.85,y:3.9}].forEach((pos,ci)=>{
     const chart=(dashboard.charts??[])[ci]; if(!chart) return;
-    const cw=6.2,ch=2.75;
-    s3.addShape(pptx.ShapeType.rect,{x:pos.x,y:pos.y,w:cw,h:ch,fill:{color:C},line:{color:BR,width:.8},rounding:true});
-    s3.addText(chart.title??"",{x:pos.x+.18,y:pos.y+.13,w:cw-.36,fontSize:11,bold:true,color:WH});
-    s3.addText(chart.subtitle??"",{x:pos.x+.18,y:pos.y+.38,w:cw-.36,fontSize:8.5,color:MU});
-    const hasSec=(chart.data??[]).some(d=>d.secondary!=null);
-    const hR=[
-      {text:"Category",options:{fontSize:8,bold:true,color:AC,fill:{color:"0D1828"},border:{pt:.5,color:BR}}},
-      {text:"Value",options:{fontSize:8,bold:true,color:AC,fill:{color:"0D1828"},align:"right",border:{pt:.5,color:BR}}},
-      ...(hasSec?[{text:"2nd",options:{fontSize:8,bold:true,color:AC,fill:{color:"0D1828"},align:"right",border:{pt:.5,color:BR}}}]:[]),
-    ];
-    const dR=(chart.data??[]).slice(0,7).map((d,ri)=>[
-      {text:String(d.name??""),options:{fontSize:8,color:"8BA5C0",fill:{color:ri%2===0?C:"0D1828"},border:{pt:.5,color:BR}}},
-      {text:String(d.value??""),options:{fontSize:8.5,bold:true,color:WH,align:"right",fill:{color:ri%2===0?C:"0D1828"},border:{pt:.5,color:BR}}},
-      ...(hasSec?[{text:d.secondary!=null?String(d.secondary):"",options:{fontSize:8,color:MU,align:"right",fill:{color:ri%2===0?C:"0D1828"},border:{pt:.5,color:BR}}}]:[]),
+    s3.addShape(pptx.ShapeType.rect,{x:pos.x,y:pos.y,w:6.2,h:2.65,fill:{color:CA},line:{color:BR},rounding:true});
+    s3.addText(chart.title||"",{x:pos.x+.16,y:pos.y+.12,w:5.9,fontSize:11,bold:true,color:WH});
+    const rows=(chart.data??[]).slice(0,6).map((d,ri)=>[
+      {text:String(d.name||""),options:{fontSize:8,color:"8BA5C0",fill:{color:ri%2?CA:"0D1828"},border:{pt:.5,color:BR}}},
+      {text:String(d.value||""),options:{fontSize:9,bold:true,color:WH,align:"right",fill:{color:ri%2?CA:"0D1828"},border:{pt:.5,color:BR}}},
     ]);
-    if(dR.length) s3.addTable([hR,...dR],{x:pos.x+.18,y:pos.y+.64,w:cw-.36,rowH:.26,border:{pt:.5,color:BR}});
+    const hdr=[
+      {text:"Category",options:{fontSize:8,bold:true,color:AC,fill:{color:"0B1525"},border:{pt:.5,color:BR}}},
+      {text:"Value",options:{fontSize:8,bold:true,color:AC,align:"right",fill:{color:"0B1525"},border:{pt:.5,color:BR}}},
+    ];
+    if(rows.length) s3.addTable([hdr,...rows],{x:pos.x+.16,y:pos.y+.45,w:5.9,rowH:.27,border:{pt:.5,color:BR}});
   });
+
   // Slide 4 — Insights
-  const s4=pptx.addSlide(); s4.background={color:D};
-  hdrSlide(s4,"AI-DETECTED INSIGHTS",GR);
-  [{x:.3,y:1.15},{x:6.85,y:1.15},{x:.3,y:2.7},{x:6.85,y:2.7},{x:.3,y:4.25},{x:6.85,y:4.25}].forEach((pos,i)=>{
+  const s4=pptx.addSlide(); s4.background={color:BG};
+  addHeader(s4,"AI-DETECTED INSIGHTS",GR);
+  [{x:.3,y:1.1},{x:6.85,y:1.1},{x:.3,y:2.65},{x:6.85,y:2.65},{x:.3,y:4.2},{x:6.85,y:4.2}].forEach((pos,i)=>{
     const ins=(dashboard.insights??[])[i]; if(!ins) return;
     const bc=ins.type==="positive"?GR:ins.type==="negative"?"EF4444":ins.type==="alert"?WA:AC;
-    s4.addShape(pptx.ShapeType.rect,{x:pos.x,y:pos.y,w:6.2,h:1.3,fill:{color:"0E1C2F"},line:{color:bc,width:1.5},rounding:true});
-    s4.addShape(pptx.ShapeType.rect,{x:pos.x,y:pos.y,w:.07,h:1.3,fill:{color:bc},line:{color:bc},rounding:true});
-    s4.addText((ins.type??"info").toUpperCase(),{x:pos.x+.22,y:pos.y+.1,w:1.8,fontSize:8,bold:true,color:bc,charSpacing:2});
-    s4.addText(`${ins.icon??"📊"} ${ins.text??""}`,{x:pos.x+.2,y:pos.y+.35,w:5.85,fontSize:10.5,color:"C0D0E0",lineSpacingMultiple:1.35});
+    s4.addShape(pptx.ShapeType.rect,{x:pos.x,y:pos.y,w:6.2,h:1.25,fill:{color:"0C1728"},line:{color:bc,width:1.5},rounding:true});
+    s4.addShape(pptx.ShapeType.rect,{x:pos.x,y:pos.y,w:.07,h:1.25,fill:{color:bc},line:{color:bc}});
+    s4.addText((ins.type||"info").toUpperCase(),{x:pos.x+.2,y:pos.y+.1,w:2,fontSize:8,bold:true,color:bc,charSpacing:2});
+    s4.addText(`${ins.icon||"📊"} ${ins.text||""}`,{x:pos.x+.2,y:pos.y+.35,w:5.85,fontSize:10,color:"C0D0E0",lineSpacingMultiple:1.4});
   });
+
   // Slide 5 — Recommendations
-  const s5=pptx.addSlide(); s5.background={color:D};
-  hdrSlide(s5,"STRATEGIC RECOMMENDATIONS","F59E0B");
+  const s5=pptx.addSlide(); s5.background={color:BG};
+  addHeader(s5,"STRATEGIC RECOMMENDATIONS","FFD700");
   (dashboard.recommendations??[]).slice(0,5).forEach((rec,i)=>{
-    const y=1.18+i*1.14;
-    s5.addShape(pptx.ShapeType.rect,{x:.3,y,w:12.73,h:1.0,fill:{color:C},line:{color:BR,width:.8},rounding:true});
-    s5.addShape(pptx.ShapeType.ellipse,{x:.42,y:y+.22,w:.56,h:.56,fill:{color:"0D2144"},line:{color:AC,width:1.5}});
-    s5.addText(String(i+1),{x:.42,y:y+.24,w:.56,fontSize:14,bold:true,color:AC,align:"center"});
-    s5.addText(rec,{x:1.15,y:y+.18,w:11.68,fontSize:12,color:"C0D0E0",lineSpacingMultiple:1.35});
+    const y=1.08+i*1.1;
+    s5.addShape(pptx.ShapeType.rect,{x:.3,y,w:12.73,h:.95,fill:{color:CA},line:{color:BR},rounding:true});
+    s5.addShape(pptx.ShapeType.ellipse,{x:.42,y:y+.19,w:.56,h:.56,fill:{color:"0B1525"},line:{color:AC,width:1.5}});
+    s5.addText(String(i+1),{x:.42,y:y+.21,w:.56,fontSize:14,bold:true,color:AC,align:"center"});
+    s5.addText(rec,{x:1.15,y:y+.17,w:11.7,fontSize:12,color:"C0D0E0",lineSpacingMultiple:1.3});
   });
-  // Slide 6 — Executive close
-  const s6=pptx.addSlide(); s6.background={color:"06080F"};
-  s6.addShape(pptx.ShapeType.rect,{x:0,y:0,w:13.33,h:3.75,fill:{color:"0C1120"},line:{color:"0C1120"}});
-  s6.addShape(pptx.ShapeType.rect,{x:0,y:3.75,w:13.33,h:.055,fill:{color:AC},line:{color:AC}});
-  s6.addText("CFO EXECUTIVE NARRATIVE",{x:.5,y:.3,w:12,fontSize:10,bold:true,color:AC,charSpacing:6});
-  s6.addText(dashboard.executiveSummary??"",{x:.5,y:.7,w:12.33,fontSize:13,color:WH,lineSpacingMultiple:1.6});
-  const dq=dashboard.dataQuality??{};
-  s6.addText("DATA QUALITY",{x:.5,y:4.0,w:4,fontSize:9,bold:true,color:MU,charSpacing:3});
-  s6.addText(`Score: ${dq.score??"N/A"}%  ·  Completeness: ${dq.completeness??"N/A"}  ·  Rows: ${dashboard._totalRows??"N/A"}`,{x:.5,y:4.3,w:12,fontSize:11,color:GR});
-  s6.addText("NEXUS ERP · AI Dashboard Intelligence · CONFIDENTIAL",{x:.5,y:7.1,w:12.33,fontSize:8.5,color:"2A3A50",align:"center"});
-  await pptx.writeFile({fileName:`nexus-${dashboard.department}-presentation-${Date.now()}.pptx`});
+
+  // Slide 6 — Narrative close
+  const s6=pptx.addSlide(); s6.background={color:"04060B"};
+  s6.addShape(pptx.ShapeType.rect,{x:0,y:0,w:13.33,h:3.6,fill:{color:"090F1A"},line:{color:"090F1A"}});
+  s6.addShape(pptx.ShapeType.rect,{x:0,y:3.6,w:13.33,h:.04,fill:{color:AC},line:{color:AC}});
+  s6.addText("CFO EXECUTIVE NARRATIVE",{x:.5,y:.25,w:12,fontSize:9,bold:true,color:AC,charSpacing:6});
+  s6.addText(dashboard.executiveSummary||"",{x:.5,y:.65,w:12.3,fontSize:13,color:WH,lineSpacingMultiple:1.65});
+  s6.addText("NEXUS ERP · AI Dashboard Intelligence · CONFIDENTIAL",{x:.5,y:7.1,w:12.3,fontSize:8.5,color:"1A2D45",align:"center"});
+  await pptx.writeFile({ fileName: `nexus-${dashboard.department||"report"}-${Date.now()}.pptx` });
 }
 
-// ── Sample datasets ───────────────────────────────────────────────────────────
+// ── Sample data ───────────────────────────────────────────────────────────────
 const SAMPLES = [
-  {label:"Sales Q-Data", dept:"sales", data:"Month,Revenue,Target,Units,Returns,Region\nJan,245000,220000,1200,45,North\nFeb,289000,250000,1450,38,North\nMar,312000,280000,1580,52,South\nApr,278000,290000,1390,61,South\nMay,345000,310000,1720,44,East\nJun,398000,340000,1990,39,East\nJul,421000,380000,2100,55,West\nAug,387000,390000,1930,67,West\nSep,445000,410000,2220,42,North\nOct,478000,440000,2390,49,South\nNov,512000,480000,2560,53,East\nDec,589000,520000,2940,61,West"},
-  {label:"HR Analytics",  dept:"hr",   data:"EmployeeID,Department,Salary,Performance,Tenure,Satisfaction,TurnoverRisk,TrainingHrs\nE001,Engineering,95000,4.5,3,8,Low,42\nE002,Sales,72000,3.8,5,6,Medium,18\nE003,Marketing,68000,4.2,2,7,Low,24\nE004,HR,65000,4.0,7,9,Low,30\nE005,Operations,78000,3.5,4,5,High,12\nE006,Finance,88000,4.7,6,8,Low,36\nE007,Engineering,102000,4.8,4,9,Low,48\nE008,Sales,69000,3.2,1,4,High,10"},
-  {label:"Operations",   dept:"operations", data:"Week,Line,Efficiency,DowntimeHrs,OutputUnits,DefectRate,CostPerUnit,OEE\nW1,LineA,87,4.2,15200,1.2,23.4,84\nW2,LineA,91,2.8,16100,0.9,22.1,89\nW3,LineB,85,5.1,14800,1.5,24.2,82\nW4,LineB,93,1.9,16800,0.7,21.3,91\nW5,LineA,89,3.4,15600,1.1,22.8,87\nW6,LineB,94,1.5,17200,0.6,20.9,93\nW7,LineA,88,3.8,15900,1.0,23.0,86\nW8,LineB,96,1.2,17800,0.5,20.1,95"},
-  {label:"Finance P&L",  dept:"finance", data:"Quarter,Revenue,COGS,GrossProfit,OpEx,EBITDA,NetIncome,CashFlow\nQ1-2023,2340000,1120000,1220000,680000,540000,312000,445000\nQ2-2023,2780000,1290000,1490000,720000,770000,428000,562000\nQ3-2023,3120000,1450000,1670000,750000,920000,510000,635000\nQ4-2023,3450000,1580000,1870000,810000,1060000,598000,724000\nQ1-2024,2890000,1340000,1550000,700000,850000,465000,520000\nQ2-2024,3210000,1480000,1730000,760000,970000,541000,618000"},
+  {label:"Sales Q1-Q4",dept:"sales",data:"Month,Revenue,Target,Units,Returns,Region\nJan,245000,220000,1200,45,North\nFeb,289000,250000,1450,38,North\nMar,312000,280000,1580,52,South\nApr,278000,290000,1390,61,South\nMay,345000,310000,1720,44,East\nJun,398000,340000,1990,39,East\nJul,421000,380000,2100,55,West\nAug,387000,390000,1930,67,West\nSep,445000,410000,2220,42,North\nOct,478000,440000,2390,49,South\nNov,512000,480000,2560,53,East\nDec,589000,520000,2940,61,West"},
+  {label:"HR Analytics",dept:"hr",data:"Department,Headcount,AvgSalary,Performance,Satisfaction,TurnoverRisk,TrainingHrs\nEngineering,142,95000,4.5,8.2,Low,42\nSales,98,72000,3.8,6.1,Medium,18\nMarketing,54,68000,4.2,7.4,Low,24\nHR,31,65000,4.0,8.9,Low,30\nOperations,89,78000,3.5,5.2,High,12\nFinance,47,88000,4.7,8.1,Low,36\nIT,76,102000,4.8,8.9,Low,48"},
+  {label:"Finance P&L",dept:"finance",data:"Quarter,Revenue,COGS,GrossProfit,OpEx,EBITDA,NetIncome\nQ1-2023,2340000,1120000,1220000,680000,540000,312000\nQ2-2023,2780000,1290000,1490000,720000,770000,428000\nQ3-2023,3120000,1450000,1670000,750000,920000,510000\nQ4-2023,3450000,1580000,1870000,810000,1060000,598000\nQ1-2024,2890000,1340000,1550000,700000,850000,465000\nQ2-2024,3210000,1480000,1730000,760000,970000,541000"},
+  {label:"Operations",dept:"operations",data:"Week,Line,Efficiency,Downtime,Output,DefectRate,OEE\nW1,LineA,87,4.2,15200,1.2,84\nW2,LineA,91,2.8,16100,0.9,89\nW3,LineB,85,5.1,14800,1.5,82\nW4,LineB,93,1.9,16800,0.7,91\nW5,LineA,89,3.4,15600,1.1,87\nW6,LineB,94,1.5,17200,0.6,93\nW7,LineA,88,3.8,15900,1.0,86\nW8,LineB,96,1.2,17800,0.5,95"},
 ];
 
-// ════════════════════════════════════════════════════════════════
-// MAIN APP
-// ════════════════════════════════════════════════════════════════
-export default function App() {
-  const [screen,     setScreen]     = useState("input");
-  const [parsedFile, setParsedFile] = useState(null);
-  const [rawText,    setRawText]    = useState("");
-  const [dept,       setDept]       = useState(null);
-  const [dragOver,   setDragOver]   = useState(false);
-  const [stepMsg,    setStepMsg]    = useState("");
-  const [pct,        setPct]        = useState(0);
-  const [dashboard,  setDashboard]  = useState(null);
-  const [activeTab,  setActiveTab]  = useState("overview");
-  const [error,      setError]      = useState(null);
-  const [exporting,  setExporting]  = useState(null);
-  // BUG FIX [3]: API key state for GitHub Pages deployment
-  const [apiKey,     setApiKey]     = useState("");
-  const [showKey,    setShowKey]    = useState(false);
-  const fileRef = useRef();
+// ══════════════════════════════════════════════════════════════════
+// CUSTOM CHART COMPONENTS
+// ══════════════════════════════════════════════════════════════════
 
-  const handleFile = useCallback(async (file) => {
-    if (!file) return;
-    setError(null);
-    try {
-      const parsed = await parseExcelFile(file);
-      setParsedFile(parsed);
-      const preview = Object.entries(parsed.sheets)
-        .map(([n,s])=>`=== Sheet: ${n} (${s.rowCount} rows) ===\n${sheetToText(s,12)}`)
-        .join("\n\n");
-      setRawText(preview.slice(0,3000));
-    } catch {
-      setError("Could not read file. Please try saving as .csv and uploading again.");
-    }
-  }, []);
-
-  const onDrop = useCallback(async (e) => {
-    e.preventDefault(); setDragOver(false);
-    const file = e.dataTransfer?.files?.[0] ?? e.target?.files?.[0];
-    if (file) await handleFile(file);
-  }, [handleFile]);
-
-  const generate = async () => {
-    if (!rawText.trim() && !parsedFile) return;
-    setScreen("processing"); setError(null); setPct(8);
-
-    let dataContext = "";
-    if (parsedFile) {
-      dataContext += `SOURCE FILE: ${parsedFile.fileName}\nTotal rows: ${parsedFile.totalRows}\nSheets: ${parsedFile.sheetNames.join(", ")}\n\n`;
-      Object.entries(parsedFile.sheets).forEach(([name,s])=>{
-        dataContext += `\n=== SHEET: "${name}" (${s.rowCount} rows) ===\n${sheetToText(s,35)}\n`;
-      });
-    } else {
-      dataContext = rawText.slice(0,4500);
-    }
-
-    try {
-      setStepMsg("🔍 RAG Pass 1 — Ingesting & structuring data..."); setPct(18);
-
-      const analysisText = await callClaude(
-        "You are a senior ERP data analyst. ALWAYS respond with pure valid JSON only. No markdown. No code fences. No extra text.",
-        `Analyze ALL of the following business data. Extract every meaningful metric and pattern.
-
-DATA:
-${dataContext}
-
-Department hint: ${dept ?? "auto-detect from content"}
-
-Return ONLY valid JSON:
-{
-  "department": "sales|hr|operations|finance|marketing|supply|it|executive",
-  "title": "Precise title based on the actual data",
-  "period": "Time period detected (e.g. Jan-Dec 2023)",
-  "summary": "2-sentence summary of what this data represents",
-  "kpis": [{"label":"name","value":"actual figure","unit":"$|%|units|hrs","trend":"up|down|stable","change":"+12.3% MoM","color":"#hex"}],
-  "charts": [
-    {"id":"c1","type":"area|bar|line|pie|radar|scatter","title":"title","subtitle":"what it tracks",
-     "data":[{"name":"label","value":123,"secondary":45}]}
-  ],
-  "insights": [{"type":"positive|negative|neutral|alert","text":"Specific insight with real numbers","icon":"emoji"}],
-  "recommendations": ["Specific actionable step"],
-  "dataQuality": {"score":85,"issues":["issue"],"completeness":"92%"},
-  "executiveSummary": "4-5 sentence board narrative with specific numbers"
-}
-
-RULES — strictly follow:
-- Use ACTUAL values from the data — no invented placeholder numbers
-- 7-10 KPIs from real data columns
-- Exactly 5 charts with real data points (6-10 points each min)
-- Chart 1: area/line — main time-series or trend
-- Chart 2: bar — category comparison
-- Chart 3: pie — composition / share breakdown
-- Chart 4: radar — multi-dimension scores
-- Chart 5: scatter — correlation (use value + secondary for x/y)
-- 6-8 insights referencing real numbers
-- 4-5 recommendations grounded in data patterns
-- Synthesise across all sheets if multiple exist`,
-        5000, apiKey
-      );
-
-      setPct(65); setStepMsg("🧠 RAG Pass 2 — Generating board narrative...");
-
-      // BUG FIX [7]: improved JSON extraction fallback
-      let parsed;
-      try {
-        const cleaned = analysisText.replace(/```json\s*/gi,"").replace(/```\s*/gi,"").trim();
-        parsed = JSON.parse(cleaned);
-      } catch {
-        const m = analysisText.match(/\{[\s\S]*\}/);
-        if (m) {
-          try { parsed = JSON.parse(m[0]); }
-          catch { throw new Error("AI returned malformed JSON. Simplify your input and retry."); }
-        } else {
-          throw new Error("AI returned malformed JSON. Simplify your input and retry.");
-        }
-      }
-
-      const narrative = await callClaude(
-        "You are a CFO. Write board-level narrative: concise, data-driven, strategic. No bullet points. 4-5 sentences.",
-        `Write a CFO narrative for the ${parsed.department} department.
-KPIs: ${JSON.stringify((parsed.kpis??[]).slice(0,6))}
-Key insights: ${JSON.stringify((parsed.insights??[]).slice(0,3))}
-Top recommendation: ${(parsed.recommendations??[])[0]??""}
-Be specific with numbers. Context, performance, and direction.`,
-        500, apiKey
-      );
-
-      setPct(95); setStepMsg("✅ Building interactive dashboard...");
-      await new Promise(r=>setTimeout(r,350));
-
-      setDashboard({...parsed, narrative, generatedAt:new Date().toLocaleString(), _totalRows:parsedFile?.totalRows??"N/A"});
-      setActiveTab("overview");
-      setScreen("dashboard");
-    } catch(err) {
-      setError(err.message??"Generation failed. Please try again.");
-      setScreen("input");
-    }
-  };
-
-  const doExport = async (type) => {
-    setExporting(type);
-    try {
-      if (type==="xlsx") exportToExcel(dashboard, parsedFile);
-      else if (type==="pdf") exportToPDF(dashboard);
-      else if (type==="pptx") await exportToPPTX(dashboard);
-    } catch(err) {
-      alert(`Export failed: ${err.message}\n\nFor PDF/PPT: allow pop-ups in your browser.`);
-    } finally {
-      setTimeout(()=>setExporting(null),2000);
-    }
-  };
-
-  const reset = () => {
-    setScreen("input"); setDashboard(null); setParsedFile(null);
-    setRawText(""); setDept(null); setError(null); setPct(0);
-  };
-
+function GaugeChart({ data, height = 220 }) {
+  const value = data?.[0]?.value ?? 0;
+  const max = data?.[0]?.secondary ?? 100;
+  const pct = Math.min(100, Math.max(0, (value / max) * 100));
+  const angle = -135 + (pct / 100) * 270;
+  const cx = "50%", cy = "55%", r = Math.min(height * 0.38, 90);
+  const col = pct > 75 ? T.accent3 : pct > 45 ? T.accent : T.warn;
   return (
-    <>
-      <style>{STYLE}</style>
-      <div style={{minHeight:"100vh"}}>
-        {/* ── HEADER ── */}
-        <div style={{height:58,borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 28px",position:"sticky",top:0,zIndex:100,background:T.bg}}>
-          <div style={{display:"flex",alignItems:"center",gap:9}}>
-            <div style={{width:33,height:33,borderRadius:9,background:`linear-gradient(135deg,${T.accent},${T.accent2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>⚡</div>
-            <div>
-              <div style={{fontWeight:800,fontSize:15,letterSpacing:"-.01em"}}>NEXUS ERP</div>
-              <div style={{fontSize:9.5,color:T.muted,letterSpacing:".07em",textTransform:"uppercase",marginTop:-1}}>AI Dashboard Intelligence</div>
-            </div>
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:9}}>
-            <span className="badge" style={{background:`${T.accent}14`,color:T.accent,border:`1px solid ${T.accent}33`}}>
-              {/* BUG FIX [2]: was style={{animation:"pulse 1.5s infinite"}} — React ignores shorthand */}
-              <span className="pulse-dot" style={{width:5,height:5,borderRadius:"50%",background:T.accent,display:"inline-block"}}/>
-              RAG ACTIVE
-            </span>
-            {/* BUG FIX [3]: API Key button for GitHub Pages */}
-            <button className={`btn-ghost ${apiKey?"key-set":""}`} onClick={()=>setShowKey(v=>!v)}
-              style={{fontSize:11.5,padding:"5px 12px",color:apiKey?T.accent3:T.muted,borderColor:apiKey?`${T.accent3}44`:T.border}}>
-              🔑 {apiKey?"Key ✓":"Set API Key"}
-            </button>
-            {screen==="dashboard"&&(
-              <button className="btn-ghost" onClick={reset} style={{fontSize:12,padding:"5px 13px"}}>← New</button>
-            )}
-          </div>
-        </div>
-
-        {/* ── API KEY PANEL — BUG FIX [3] ── */}
-        {showKey && (
-          <div style={{background:T.card,borderBottom:`1px solid ${T.border}`,padding:"13px 28px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-            <div style={{fontSize:12,color:T.muted,flex:1,lineHeight:1.65,minWidth:200}}>
-              <b style={{color:T.text}}>GitHub / Self-hosted deployment:</b> Enter your Anthropic API key.
-              It stays in memory only — never stored, never logged.
-              {" "}<a href="https://console.anthropic.com" target="_blank" rel="noreferrer" style={{color:T.accent,textDecoration:"none"}}>Get a key →</a>
-            </div>
-            <input className="field" type="password" placeholder="sk-ant-api03-…"
-              value={apiKey} onChange={e=>setApiKey(e.target.value)}
-              style={{padding:"7px 12px",fontSize:12.5,width:280,borderRadius:8}}/>
-            <button className="btn-ghost" onClick={()=>setApiKey("")} style={{padding:"5px 10px",fontSize:11.5}}>Clear</button>
-            <button className="btn-ghost" onClick={()=>setShowKey(false)}
-              style={{padding:"5px 12px",fontSize:11.5,color:T.accent3,borderColor:`${T.accent3}44`}}>
-              Done ✓
-            </button>
-          </div>
-        )}
-
-        {screen==="processing" && <ProcessingView stepMsg={stepMsg} pct={pct}/>}
-        {screen==="input"      && (
-          <InputView rawText={rawText} setRawText={setRawText}
-            parsedFile={parsedFile} setParsedFile={setParsedFile}
-            dept={dept} setDept={setDept}
-            dragOver={dragOver} setDragOver={setDragOver}
-            fileRef={fileRef} onDrop={onDrop}
-            onGenerate={generate} error={error} setError={setError}/>
-        )}
-        {screen==="dashboard" && dashboard && (
-          <DashboardView dashboard={dashboard} parsedFile={parsedFile}
-            activeTab={activeTab} setActiveTab={setActiveTab}
-            doExport={doExport} exporting={exporting}/>
-        )}
-      </div>
-    </>
+    <svg width="100%" height={height} viewBox={`0 0 300 ${height}`}>
+      {[0,1,2,3,4].map(i => {
+        const a = (-135 + i * 67.5) * Math.PI / 180;
+        const x1 = 150 + (r-4) * Math.cos(a), y1 = height*.55 + (r-4) * Math.sin(a);
+        const x2 = 150 + (r+8) * Math.cos(a), y2 = height*.55 + (r+8) * Math.sin(a);
+        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={T.muted} strokeWidth={1.5}/>;
+      })}
+      <circle cx={150} cy={height*.55} r={r} fill="none" stroke={T.border} strokeWidth={14} strokeDasharray="0 1000"
+        style={{strokeDasharray: `${r * 2 * Math.PI * 270/360} 1000`, strokeLinecap:"round",
+          transform:`rotate(-135deg)`, transformOrigin:`150px ${height*.55}px`}}/>
+      <circle cx={150} cy={height*.55} r={r} fill="none" stroke={col} strokeWidth={14}
+        strokeLinecap="round" opacity={0.9}
+        style={{strokeDasharray:`${r * 2 * Math.PI * 270/360 * pct/100} ${r*2*Math.PI}`,
+          transform:`rotate(-135deg)`, transformOrigin:`150px ${height*.55}px`,
+          filter:`drop-shadow(0 0 6px ${col}88)`}}/>
+      <line x1={150} y1={height*.55}
+        x2={150 + (r-22) * Math.cos(angle * Math.PI/180)}
+        y2={height*.55 + (r-22) * Math.sin(angle * Math.PI/180)}
+        stroke={T.text} strokeWidth={2.5} strokeLinecap="round"/>
+      <circle cx={150} cy={height*.55} r={5} fill={T.text}/>
+      <text x={150} y={height*.55+30} textAnchor="middle" fill={T.text} fontSize={22} fontWeight={800} fontFamily="JetBrains Mono">{value}</text>
+      <text x={150} y={height*.55+50} textAnchor="middle" fill={T.muted} fontSize={11}>{data?.[0]?.name || "Gauge"}</text>
+      <text x={150} y={height*.55+68} textAnchor="middle" fill={col} fontSize={13} fontWeight={700}>{pct.toFixed(0)}%</text>
+    </svg>
   );
 }
 
-// ── Processing ────────────────────────────────────────────────────────────────
-function ProcessingView({stepMsg,pct}) {
+function HeatmapChart({ data, height = 240 }) {
+  if (!data?.length) return null;
+  const cols = Math.ceil(Math.sqrt(data.length));
+  const rows = Math.ceil(data.length / cols);
+  const W = 280, cellW = W / cols - 2, cellH = (height - 30) / rows - 2;
+  const max = Math.max(...data.map(d => Number(d.value) || 0)) || 1;
+  const min = Math.min(...data.map(d => Number(d.value) || 0));
   return (
-    <div style={{minHeight:"calc(100vh - 58px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:26}}>
-      <div style={{position:"relative",width:84,height:84}}>
-        <div style={{position:"absolute",inset:0,borderRadius:"50%",border:`2.5px solid ${T.border}`}}/>
+    <svg width="100%" height={height} viewBox={`0 0 300 ${height}`}>
+      {data.map((d, i) => {
+        const c = i % cols, r = Math.floor(i / cols);
+        const x = 10 + c * (cellW + 2), y = 10 + r * (cellH + 2);
+        const t = (Number(d.value) - min) / (max - min);
+        const opacity = 0.15 + t * 0.85;
+        return (
+          <g key={i}>
+            <rect x={x} y={y} width={cellW} height={cellH} rx={3}
+              fill={T.accent} opacity={opacity}/>
+            <text x={x + cellW/2} y={y + cellH/2 + 4} textAnchor="middle"
+              fill={t > 0.6 ? "#fff" : T.muted} fontSize={9} fontFamily="JetBrains Mono">
+              {d.name?.slice(0,6)}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function FunnelChart2({ data, height = 240 }) {
+  if (!data?.length) return null;
+  const max = Math.max(...data.map(d => Number(d.value) || 0)) || 1;
+  const rowH = (height - 20) / data.length;
+  return (
+    <svg width="100%" height={height} viewBox="0 0 300 280">
+      {data.map((d, i) => {
+        const pct = (Number(d.value) || 0) / max;
+        const w = 240 * pct, x = (300 - w) / 2;
+        const y = 10 + i * (rowH + 4);
+        const col = T.colors[i % T.colors.length];
+        return (
+          <g key={i}>
+            <rect x={x} y={y} width={w} height={rowH} rx={4} fill={col} opacity={0.85}
+              style={{filter:`drop-shadow(0 2px 4px ${col}44)`}}/>
+            <text x={150} y={y + rowH/2 + 4} textAnchor="middle" fill="#fff" fontSize={11} fontWeight={600}>
+              {d.name}
+            </text>
+            <text x={x + w + 6} y={y + rowH/2 + 4} fill={T.muted} fontSize={10}>
+              {d.value}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function WaterfallChart2({ data, height = 240 }) {
+  if (!data?.length) return null;
+  const W = 280, barW = Math.max(12, W / data.length - 8);
+  let running = 0;
+  const bars = data.map((d, i) => {
+    const val = Number(d.value) || 0;
+    const from = running;
+    running += val;
+    return { ...d, from, to: running, val, col: val >= 0 ? T.accent3 : T.danger };
+  });
+  const allVals = bars.flatMap(b => [b.from, b.to]);
+  const minV = Math.min(...allVals), maxV = Math.max(...allVals);
+  const range = (maxV - minV) || 1;
+  const scaleY = (v) => height - 30 - ((v - minV) / range) * (height - 50);
+  return (
+    <svg width="100%" height={height} viewBox={`0 0 300 ${height}`}>
+      <line x1={10} y1={scaleY(0)} x2={290} y2={scaleY(0)} stroke={T.border} strokeWidth={1} strokeDasharray="4 3"/>
+      {bars.map((b, i) => {
+        const x = 10 + i * (barW + 8);
+        const y1 = scaleY(Math.max(b.from, b.to)), y2 = scaleY(Math.min(b.from, b.to));
+        const bh = Math.max(2, y2 - y1);
+        return (
+          <g key={i}>
+            {i > 0 && <line x1={x - 8 + barW} y1={scaleY(b.from)} x2={x} y2={scaleY(b.from)} stroke={T.muted} strokeWidth={1} strokeDasharray="3 2"/>}
+            <rect x={x} y={y1} width={barW} height={bh} rx={2} fill={b.col} opacity={0.85}/>
+            <text x={x + barW/2} y={y1 - 3} textAnchor="middle" fill={b.col} fontSize={9} fontFamily="JetBrains Mono">{b.val > 0 ? "+" : ""}{b.val}</text>
+            <text x={x + barW/2} y={height - 4} textAnchor="middle" fill={T.muted} fontSize={8}>{b.name?.slice(0,5)}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function SemiPieChart({ data, height = 220 }) {
+  if (!data?.length) return null;
+  const total = data.reduce((s, d) => s + (Number(d.value) || 0), 0) || 1;
+  const cx = 150, cy = height * 0.9, r = Math.min(height * 0.75, 130);
+  let startAngle = Math.PI;
+  const slices = data.map((d, i) => {
+    const frac = (Number(d.value) || 0) / total;
+    const sweep = frac * Math.PI;
+    const sa = startAngle, ea = sa + sweep;
+    const x1 = cx + r * Math.cos(sa), y1 = cy + r * Math.sin(sa);
+    const x2 = cx + r * Math.cos(ea), y2 = cy + r * Math.sin(ea);
+    const xi1 = cx + (r*.55) * Math.cos(sa), yi1 = cy + (r*.55) * Math.sin(sa);
+    const xi2 = cx + (r*.55) * Math.cos(ea), yi2 = cy + (r*.55) * Math.sin(ea);
+    const large = sweep > Math.PI ? 1 : 0;
+    const mid = (sa + ea) / 2;
+    const lx = cx + (r * 0.75) * Math.cos(mid), ly = cy + (r * 0.75) * Math.sin(mid);
+    startAngle = ea;
+    return { ...d, path: `M${xi1},${yi1} A${r*.55},${r*.55},0,${large},1,${xi2},${yi2} L${x2},${y2} A${r},${r},0,${large},0,${x1},${y1} Z`, lx, ly, col: T.colors[i % T.colors.length], frac };
+  });
+  return (
+    <svg width="100%" height={height} viewBox={`0 0 300 ${height}`}>
+      {slices.map((s, i) => (
+        <g key={i}>
+          <path d={s.path} fill={s.col} opacity={0.88} style={{filter:`drop-shadow(0 2px 6px ${s.col}44)`}}/>
+          {s.frac > 0.06 && <text x={s.lx} y={s.ly} textAnchor="middle" fill="#fff" fontSize={9} fontWeight={700}>{(s.frac*100).toFixed(0)}%</text>}
+        </g>
+      ))}
+      <rect x={20} y={height-18} width={260} height={18} fill={T.bg} opacity={0.9}/>
+      {slices.slice(0,6).map((s, i) => (
+        <g key={i}>
+          <rect x={20 + i*44} y={height-14} width={8} height={8} rx={2} fill={s.col}/>
+          <text x={32 + i*44} y={height-6} fill={T.muted} fontSize={8}>{s.name?.slice(0,5)}</text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function ProgressRingChart({ data, height = 220 }) {
+  const items = (data || []).slice(0, 5);
+  const cx = 150, cy = height / 2;
+  return (
+    <svg width="100%" height={height} viewBox={`0 0 300 ${height}`}>
+      {items.map((d, i) => {
+        const r = 30 + i * 20;
+        const max = d.secondary || 100;
+        const pct = Math.min(100, (Number(d.value) || 0) / max * 100);
+        const circ = 2 * Math.PI * r;
+        const col = T.colors[i % T.colors.length];
+        return (
+          <g key={i}>
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke={T.border} strokeWidth={8}/>
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke={col} strokeWidth={8}
+              strokeLinecap="round" strokeDasharray={`${circ * pct/100} ${circ}`}
+              style={{transform:"rotate(-90deg)", transformOrigin:`${cx}px ${cy}px`, filter:`drop-shadow(0 0 4px ${col}66)`}}/>
+            <text x={cx} y={cy + 4} textAnchor="middle" fill={col} fontSize={11} fontWeight={700} fontFamily="JetBrains Mono">{pct.toFixed(0)}%</text>
+          </g>
+        );
+      })}
+      <text x={cx} y={height - 8} textAnchor="middle" fill={T.muted} fontSize={10}>
+        {items.map(d=>d.name).slice(0,3).join(" · ")}
+      </text>
+    </svg>
+  );
+}
+
+// ── Animated Counter ──────────────────────────────────────────────────────────
+function AnimatedNum({ value }) {
+  const [disp, setDisp] = useState("0");
+  const num = useMemo(() => parseFloat(String(value).replace(/[^0-9.-]/g,"")) || 0, [value]);
+  useEffect(() => {
+    let frame, step = 0, total = 20;
+    const tick = () => {
+      step++;
+      const v = (num * step) / total;
+      if (step >= total) { setDisp(String(value)); return; }
+      setDisp(v.toLocaleString(undefined,{maximumFractionDigits:1}));
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [num, value]);
+  return <>{disp}</>;
+}
+
+// ── Tooltip style ─────────────────────────────────────────────────────────────
+const TT = {
+  contentStyle:{background:T.card,border:`1px solid ${T.border}`,borderRadius:9,fontSize:11.5,fontFamily:"Sora,sans-serif",padding:"9px 13px"},
+  labelStyle:{color:T.muted,fontWeight:600},
+  itemStyle:{color:T.text},
+  cursor:{fill:`${T.accent}09`},
+};
+
+// ── Chart Renderer ────────────────────────────────────────────────────────────
+function ChartRenderer({ chart, height = 260, overrideType }) {
+  const data = chart?.data ?? [];
+  const type = overrideType || chart?.type || "bar";
+  const hasSec = data.some(d => d.secondary != null && d.secondary !== "");
+  const id = chart?.id || "c";
+
+  if (!data.length) return (
+    <div style={{height,display:"flex",alignItems:"center",justifyContent:"center",color:T.muted,fontSize:13}}>No data</div>
+  );
+
+  if (type === "gauge")       return <GaugeChart data={data} height={height}/>;
+  if (type === "heatmap")     return <HeatmapChart data={data} height={height}/>;
+  if (type === "funnel")      return <FunnelChart2 data={data} height={height}/>;
+  if (type === "waterfall")   return <WaterfallChart2 data={data} height={height}/>;
+  if (type === "semipie")     return <SemiPieChart data={data} height={height}/>;
+  if (type === "progressring") return <ProgressRingChart data={data} height={height}/>;
+
+  if (type === "treemap") {
+    const tdata = [{name:"root",children:data.map(d=>({name:d.name,size:Math.abs(Number(d.value)||1)}))}];
+    return (
+      <ResponsiveContainer width="100%" height={height}>
+        <Treemap data={tdata[0].children} dataKey="size" aspectRatio={2}
+          content={({x,y,width,height,index,name,size})=>(
+            <g><rect x={x+1} y={y+1} width={width-2} height={height-2} rx={4}
+              fill={T.colors[index%T.colors.length]} fillOpacity={.82}/>
+              {width>40&&height>20&&<text x={x+width/2} y={y+height/2+4} textAnchor="middle"
+                fill="#fff" fontSize={10} fontWeight={600}>{name}</text>}
+            </g>
+          )}/>
+      </ResponsiveContainer>
+    );
+  }
+
+  if (type === "radialbar") {
+    const rdata = data.slice(0,8).map((d,i)=>({...d,fill:T.colors[i%T.colors.length]}));
+    return (
+      <ResponsiveContainer width="100%" height={height}>
+        <RadialBarChart innerRadius="20%" outerRadius="90%" data={rdata} startAngle={90} endAngle={-270}>
+          <RadialBar minAngle={8} dataKey="value" cornerRadius={4} label={{position:"insideStart",fill:"#fff",fontSize:9}}/>
+          <Tooltip {...TT}/><Legend wrapperStyle={{fontSize:10,color:T.muted}}/>
+        </RadialBarChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  if (type === "scatter" || type === "bubble") {
+    const pts = data.map(d=>({x:Number(d.value)||0,y:Number(d.secondary)||0,z:Number(d.value)||20,name:d.name}));
+    return (
+      <ResponsiveContainer width="100%" height={height}>
+        <ScatterChart>
+          <CartesianGrid strokeDasharray="3 3" stroke={T.border} opacity={.4}/>
+          <XAxis type="number" dataKey="x" tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
+          <YAxis type="number" dataKey="y" tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
+          {type==="bubble"&&<ZAxis dataKey="z" range={[40,300]}/>}
+          <Tooltip {...TT} content={({payload})=>{
+            if(!payload?.length) return null;
+            const p=payload[0].payload;
+            return <div style={TT.contentStyle}><b style={{color:T.text}}>{p.name}</b><br/><span style={{color:T.accent}}>Value: {p.x}</span>{p.y?<><br/><span style={{color:T.accent2}}>Sec: {p.y}</span></>:null}</div>;
+          }}/>
+          <Scatter data={pts} fill={T.accent} fillOpacity={.75}/>
+        </ScatterChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  if (type === "pie" || type === "donut") {
+    const inner = type==="donut" ? height*.2 : 0;
+    return (
+      <ResponsiveContainer width="100%" height={height}>
+        <PieChart>
+          <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="48%"
+            outerRadius={height*.36} innerRadius={inner} paddingAngle={2} strokeWidth={0}>
+            {data.map((_,i)=><Cell key={i} fill={T.colors[i%T.colors.length]}/>)}
+          </Pie>
+          <Tooltip {...TT}/><Legend wrapperStyle={{fontSize:11,color:T.muted}}/>
+        </PieChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  if (type === "radar") return (
+    <ResponsiveContainer width="100%" height={height}>
+      <RadarChart data={data}>
+        <PolarGrid stroke={T.border}/><PolarAngleAxis dataKey="name" tick={{fill:T.muted,fontSize:10}}/>
+        <PolarRadiusAxis tick={{fill:T.muted,fontSize:9}}/>
+        <Radar dataKey="value" stroke={T.accent} fill={T.accent} fillOpacity={.15} name="Value"/>
+        {hasSec&&<Radar dataKey="secondary" stroke={T.accent2} fill={T.accent2} fillOpacity={.1} name="Target"/>}
+        <Tooltip {...TT}/>{hasSec&&<Legend wrapperStyle={{fontSize:11,color:T.muted}}/>}
+      </RadarChart>
+    </ResponsiveContainer>
+  );
+
+  if (type === "hbar") return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={data} layout="vertical" margin={{left:10}}>
+        <CartesianGrid strokeDasharray="3 3" stroke={T.border} horizontal={false}/>
+        <XAxis type="number" tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
+        <YAxis type="category" dataKey="name" tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false} width={70}/>
+        <Tooltip {...TT}/>{hasSec&&<Legend wrapperStyle={{fontSize:11,color:T.muted}}/>}
+        <Bar dataKey="value" fill={T.accent} radius={[0,5,5,0]} name="Value"/>
+        {hasSec&&<Bar dataKey="secondary" fill={T.accent2} radius={[0,5,5,0]} name="Target"/>}
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
+  if (type === "stackbar") return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={data} barGap={1}>
+        <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
+        <XAxis dataKey="name" tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
+        <YAxis tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
+        <Tooltip {...TT}/><Legend wrapperStyle={{fontSize:11,color:T.muted}}/>
+        <Bar dataKey="value" fill={T.accent} stackId="a" name="Value"/>
+        {hasSec&&<Bar dataKey="secondary" fill={T.accent2} stackId="a" radius={[4,4,0,0]} name="Target"/>}
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
+  if (type === "stackarea") return (
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart data={data}>
+        <defs>
+          <linearGradient id={`sa1${id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={T.accent} stopOpacity={.3}/><stop offset="95%" stopColor={T.accent} stopOpacity={0}/></linearGradient>
+          <linearGradient id={`sa2${id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={T.accent2} stopOpacity={.25}/><stop offset="95%" stopColor={T.accent2} stopOpacity={0}/></linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
+        <XAxis dataKey="name" tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
+        <YAxis tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
+        <Tooltip {...TT}/><Legend wrapperStyle={{fontSize:11,color:T.muted}}/>
+        <Area type="monotone" dataKey="value" stroke={T.accent} fill={`url(#sa1${id})`} strokeWidth={2} name="Value" stackId="1"/>
+        {hasSec&&<Area type="monotone" dataKey="secondary" stroke={T.accent2} fill={`url(#sa2${id})`} strokeWidth={2} name="Target" stackId="1"/>}
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+
+  if (type === "composed") return (
+    <ResponsiveContainer width="100%" height={height}>
+      <ComposedChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
+        <XAxis dataKey="name" tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
+        <YAxis tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
+        <Tooltip {...TT}/><Legend wrapperStyle={{fontSize:11,color:T.muted}}/>
+        <Bar dataKey="value" fill={T.accent} radius={[4,4,0,0]} fillOpacity={.85} name="Value"/>
+        {hasSec&&<Line type="monotone" dataKey="secondary" stroke={T.gold} strokeWidth={2.5} dot={{fill:T.gold,r:3}} name="Target"/>}
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+
+  if (type === "line") return (
+    <ResponsiveContainer width="100%" height={height}>
+      <LineChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
+        <XAxis dataKey="name" tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
+        <YAxis tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
+        <Tooltip {...TT}/>{hasSec&&<Legend wrapperStyle={{fontSize:11,color:T.muted}}/>}
+        <Line type="monotone" dataKey="value" stroke={T.accent} strokeWidth={2.5} dot={{fill:T.accent,r:3.5,strokeWidth:0}} name="Value"/>
+        {hasSec&&<Line type="monotone" dataKey="secondary" stroke={T.accent2} strokeWidth={2} strokeDasharray="5 4" dot={{fill:T.accent2,r:3,strokeWidth:0}} name="Target"/>}
+      </LineChart>
+    </ResponsiveContainer>
+  );
+
+  if (type === "bar") return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={data} barGap={2}>
+        <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
+        <XAxis dataKey="name" tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
+        <YAxis tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
+        <Tooltip {...TT}/>{hasSec&&<Legend wrapperStyle={{fontSize:11,color:T.muted}}/>}
+        <Bar dataKey="value" radius={[5,5,0,0]} name="Value">
+          {data.map((_,i)=><Cell key={i} fill={T.colors[i%T.colors.length]}/>)}
+        </Bar>
+        {hasSec&&<Bar dataKey="secondary" fill={T.accent2} radius={[5,5,0,0]} name="Target"/>}
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
+  // area (default)
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart data={data}>
+        <defs>
+          <linearGradient id={`ga${id}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={T.accent} stopOpacity={.28}/><stop offset="95%" stopColor={T.accent} stopOpacity={0}/>
+          </linearGradient>
+          <linearGradient id={`gb${id}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={T.accent2} stopOpacity={.22}/><stop offset="95%" stopColor={T.accent2} stopOpacity={0}/>
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
+        <XAxis dataKey="name" tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
+        <YAxis tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
+        <Tooltip {...TT}/>{hasSec&&<Legend wrapperStyle={{fontSize:11,color:T.muted}}/>}
+        <Area type="monotone" dataKey="value" stroke={T.accent} fill={`url(#ga${id})`} strokeWidth={2.5} name="Value"/>
+        {hasSec&&<Area type="monotone" dataKey="secondary" stroke={T.accent2} fill={`url(#gb${id})`} strokeWidth={2} name="Target"/>}
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SCREENS
+// ══════════════════════════════════════════════════════════════════
+
+function ProcessingView({ stepMsg, pct }) {
+  return (
+    <div style={{minHeight:"calc(100vh - 58px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:28}}>
+      <div style={{position:"relative",width:90,height:90}}>
+        <div style={{position:"absolute",inset:0,borderRadius:"50%",border:`2px solid ${T.border}`}}/>
         <div className="spin" style={{position:"absolute",inset:0,borderRadius:"50%",border:`2.5px solid transparent`,borderTopColor:T.accent}}/>
-        <div style={{position:"absolute",inset:9,borderRadius:"50%",border:`2px solid transparent`,borderTopColor:T.accent2,animation:"spin .6s linear infinite reverse"}}/>
+        <div style={{position:"absolute",inset:10,borderRadius:"50%",border:"2px solid transparent",borderTopColor:T.accent2,animation:"spin .65s linear infinite reverse"}}/>
+        <div style={{position:"absolute",inset:22,borderRadius:"50%",border:"1.5px solid transparent",borderTopColor:T.accent3,animation:"spin .45s linear infinite"}}/>
         <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>⚡</div>
       </div>
       <div style={{textAlign:"center"}}>
-        <div style={{fontWeight:800,fontSize:20,marginBottom:7}}>Processing Your Data</div>
-        <div className="mono" style={{color:T.accent,fontSize:13}}>{stepMsg}</div>
+        <div style={{fontWeight:800,fontSize:22,marginBottom:8}}>Analysing Your Data</div>
+        <div className="mono" style={{color:T.accent,fontSize:12.5}}>{stepMsg}</div>
       </div>
-      <div style={{width:280,background:T.border,borderRadius:100,height:5,overflow:"hidden"}}>
-        <div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${T.accent},${T.accent2})`,transition:"width .7s ease",borderRadius:100}}/>
+      <div style={{width:320,background:T.border,borderRadius:100,height:5,overflow:"hidden"}}>
+        <div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${T.accent},${T.accent2},${T.accent3})`,transition:"width .8s cubic-bezier(.22,1,.36,1)",borderRadius:100}}/>
       </div>
-      <div style={{color:T.muted,fontSize:13,maxWidth:340,textAlign:"center",lineHeight:1.7}}>
-        RAG pipeline: ingest → detect structure → extract KPIs → synthesize charts → generate board report
+      <div style={{fontSize:12.5,color:T.muted,maxWidth:360,textAlign:"center",lineHeight:1.75}}>
+        RAG pipeline: ingest → structure detection → KPI extraction → chart synthesis → board narrative
       </div>
     </div>
   );
 }
 
-// ── Input View ────────────────────────────────────────────────────────────────
-function InputView({rawText,setRawText,parsedFile,setParsedFile,dept,setDept,dragOver,setDragOver,fileRef,onDrop,onGenerate,error,setError}) {
-  const canGenerate = rawText.trim().length>0 || parsedFile!=null;
+function InputView({ rawText, setRawText, parsedFile, setParsedFile, dept, setDept, dragOver, setDragOver, fileRef, onDrop, onGenerate, error, setError }) {
+  const canGen = rawText.trim().length > 0 || parsedFile != null;
   return (
-    <div style={{maxWidth:840,margin:"0 auto",padding:"48px 20px"}}>
-      <div className="au" style={{textAlign:"center",marginBottom:48}}>
-        <h1 style={{fontWeight:800,fontSize:44,letterSpacing:"-.04em",lineHeight:1.1,marginBottom:13}}>
-          Unstructured Data →<br/>
-          <span style={{background:`linear-gradient(135deg,${T.accent},${T.accent2})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>
-            Board-Ready Intelligence
+    <div style={{maxWidth:860,margin:"0 auto",padding:"52px 22px"}}>
+      <div className="au" style={{textAlign:"center",marginBottom:52}}>
+        <div style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 14px",borderRadius:100,background:`${T.accent}0E`,border:`1px solid ${T.accent}33`,color:T.accent,fontSize:11,fontWeight:700,letterSpacing:".07em",textTransform:"uppercase",marginBottom:16}}>
+          <span className="pulse-dot" style={{width:5,height:5,borderRadius:"50%",background:T.accent}}/>
+          AI-Powered BI Platform
+        </div>
+        <h1 style={{fontWeight:800,fontSize:46,letterSpacing:"-.04em",lineHeight:1.08,marginBottom:16}}>
+          Drop Data, Get<br/>
+          <span style={{background:`linear-gradient(135deg,${T.accent},${T.accent2},${T.accent3})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>
+            Board Intelligence
           </span>
         </h1>
-        <p style={{color:T.muted,fontSize:15.5,maxWidth:480,margin:"0 auto",lineHeight:1.75}}>
-          Upload any Excel (.xlsx/.xls), CSV, or paste raw data. AI auto-detects structure, extracts KPIs, and builds interactive dashboards with real exports.
+        <p style={{color:T.muted,fontSize:15,maxWidth:500,margin:"0 auto",lineHeight:1.8}}>
+          Upload Excel, CSV or PDF — AI auto-detects structure, extracts KPIs, builds 20+ interactive charts and generates board-ready reports.
         </p>
       </div>
 
-      <div className="au1" style={{marginBottom:26}}>
-        <div style={{fontSize:11,color:T.muted,textTransform:"uppercase",letterSpacing:".08em",marginBottom:9,fontWeight:700}}>
-          Department <span style={{color:T.border,fontWeight:400}}>(optional — AI auto-detects)</span>
+      <div className="au1" style={{marginBottom:24}}>
+        <div style={{fontSize:10.5,color:T.muted,textTransform:"uppercase",letterSpacing:".09em",marginBottom:9,fontWeight:700}}>
+          Department <span style={{color:T.border,textTransform:"none",fontWeight:400,letterSpacing:0}}>— optional, AI auto-detects</span>
         </div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
           {DEPTS.map(d=>(
-            <button key={d.id} className={`chip ${dept===d.id?"on":""}`}
-              style={{"--cc":d.color}} onClick={()=>setDept(d.id===dept?null:d.id)}>
+            <button key={d.id} className={`chip ${dept===d.id?"on":""}`} style={{"--cc":d.color}}
+              onClick={()=>setDept(d.id===dept?null:d.id)}>
               {d.icon} {d.label}
             </button>
           ))}
@@ -666,186 +898,107 @@ function InputView({rawText,setRawText,parsedFile,setParsedFile,dept,setDept,dra
       <div className="au2"
         onClick={()=>fileRef.current.click()}
         onDrop={onDrop} onDragOver={e=>{e.preventDefault();setDragOver(true);}} onDragLeave={()=>setDragOver(false)}
-        style={{border:`2px dashed ${dragOver?T.accent:T.border}`,borderRadius:13,padding:"26px 22px",textAlign:"center",cursor:"pointer",background:dragOver?`${T.accent}07`:"rgba(255,255,255,.01)",transition:".2s",marginBottom:12}}>
-        <input ref={fileRef} type="file" accept=".csv,.tsv,.txt,.xls,.xlsx" style={{display:"none"}} onChange={onDrop}/>
-        <div style={{fontSize:34,marginBottom:9}}>📂</div>
-        <div style={{fontWeight:700,fontSize:14.5,marginBottom:3}}>Drop Excel / CSV or click to browse</div>
-        <div style={{color:T.muted,fontSize:12.5}}>Supports .xlsx .xls .csv .tsv .txt — multi-sheet workbooks fully supported</div>
-        {parsedFile&&(
-          <div style={{marginTop:13,display:"inline-flex",alignItems:"center",gap:8,padding:"6px 14px",background:`${T.accent3}15`,border:`1px solid ${T.accent3}44`,borderRadius:8,color:T.accent3,fontSize:12.5,fontWeight:600}}>
+        style={{border:`2px dashed ${dragOver?T.accent:T.border}`,borderRadius:14,padding:"32px 24px",textAlign:"center",cursor:"pointer",
+          background:dragOver?`${T.accent}08`:"rgba(255,255,255,.008)",transition:"all .2s",marginBottom:12,
+          ...(dragOver?{boxShadow:`0 0 30px ${T.accent}22`}:{})}}>
+        <input ref={fileRef} type="file" accept=".csv,.tsv,.txt,.xls,.xlsx,.pdf" style={{display:"none"}} onChange={onDrop}/>
+        <div style={{fontSize:40,marginBottom:10}}>📂</div>
+        <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>Drop Excel, CSV or PDF here</div>
+        <div style={{color:T.muted,fontSize:12.5}}>Supports .xlsx .xls .csv .tsv .pdf · Multi-sheet workbooks · Up to 50,000 rows</div>
+        {parsedFile && (
+          <div style={{marginTop:14,display:"inline-flex",alignItems:"center",gap:8,padding:"7px 16px",background:`${T.accent3}12`,border:`1px solid ${T.accent3}44`,borderRadius:9,color:T.accent3,fontSize:12.5,fontWeight:600}}>
             ✅ {parsedFile.fileName} · {parsedFile.sheetNames.length} sheet(s) · {parsedFile.totalRows.toLocaleString()} rows
           </div>
         )}
       </div>
 
       <div className="au2" style={{marginBottom:10}}>
-        <div style={{fontSize:11,color:T.muted,textTransform:"uppercase",letterSpacing:".08em",marginBottom:7,fontWeight:700}}>Or paste data / raw text</div>
-        <textarea value={rawText} onChange={e=>setRawText(e.target.value)}
-          placeholder={"Paste CSV rows, raw numbers, or describe:\n\n\"Q1 sales $2.3M (+12%), Q2 $2.8M (+22%), top product Widget A 40% revenue...\"\n\nOr upload a file above — data appears here automatically."}
-          style={{width:"100%",minHeight:120,padding:"13px 15px",borderRadius:11,border:`1px solid ${T.border}`,background:T.card,color:T.text,fontFamily:"IBM Plex Mono,monospace",fontSize:12,lineHeight:1.8,resize:"vertical",outline:"none",transition:"border-color .18s"}}
-          onFocus={e=>e.target.style.borderColor=T.accent+"66"}
-          onBlur={e=>e.target.style.borderColor=T.border}/>
+        <div style={{fontSize:10.5,color:T.muted,textTransform:"uppercase",letterSpacing:".09em",marginBottom:8,fontWeight:700}}>Or paste data</div>
+        <textarea className="field" value={rawText} onChange={e=>setRawText(e.target.value)}
+          placeholder={"Paste CSV rows, metrics, or describe:\n\n\"Q1 sales $2.3M (+12%), Q2 $2.8M (+22%), top SKU: Widget A 40% revenue share, NPS 72...\"\n\nOr load a sample below →"}
+          style={{padding:"14px 16px",fontSize:12,lineHeight:1.9,minHeight:110,resize:"vertical",fontFamily:"JetBrains Mono,monospace"}}/>
       </div>
 
-      <div style={{display:"flex",gap:7,marginBottom:26,flexWrap:"wrap",alignItems:"center"}}>
-        <span style={{fontSize:11.5,color:T.muted}}>Try samples:</span>
+      <div style={{display:"flex",gap:7,marginBottom:28,flexWrap:"wrap",alignItems:"center"}}>
+        <span style={{fontSize:11,color:T.muted}}>Samples:</span>
         {SAMPLES.map(s=>(
-          <button key={s.label} className="chip" onClick={()=>{setRawText(s.data);setDept(s.dept);setParsedFile(null);}}>
+          <button key={s.label} className="chip" onClick={()=>{setRawText(s.data);setDept(s.dept);setParsedFile(null);setError(null);}}>
             {s.label}
           </button>
         ))}
       </div>
 
-      {error&&(
-        <div style={{padding:"11px 15px",borderRadius:9,background:`${T.danger}14`,border:`1px solid ${T.danger}44`,color:T.danger,marginBottom:18,fontSize:13.5}}>
+      {error && (
+        <div style={{padding:"12px 16px",borderRadius:10,background:`${T.danger}12`,border:`1px solid ${T.danger}44`,color:T.danger,marginBottom:20,fontSize:13.5,lineHeight:1.6}}>
           ⚠️ {error}
         </div>
       )}
 
-      <button onClick={onGenerate} disabled={!canGenerate}
-        style={{width:"100%",padding:"16px 28px",fontSize:15.5,fontWeight:700,background:canGenerate?`linear-gradient(135deg,${T.accent},${T.accent2})`:T.border,border:"none",borderRadius:11,color:"#fff",cursor:canGenerate?"pointer":"not-allowed",transition:"all .2s",letterSpacing:".02em"}}
-        onMouseEnter={e=>{if(canGenerate)e.target.style.transform="translateY(-1px)";}}
-        onMouseLeave={e=>e.target.style.transform="translateY(0)"}>
+      <button className="btn-primary" onClick={onGenerate} disabled={!canGen}
+        style={{width:"100%",fontSize:15,padding:"16px 28px"}}>
         ⚡ Generate Interactive Dashboard
       </button>
-      <p style={{textAlign:"center",marginTop:12,color:T.muted,fontSize:11.5}}>
-        Claude RAG · 6 chart types · Sliders & filters · Export Excel / PDF / PowerPoint
+      <p style={{textAlign:"center",marginTop:10,color:T.muted,fontSize:11}}>
+        20+ chart types · KPI cards · Sliders &amp; filters · Export PDF / Excel / PowerPoint
       </p>
     </div>
   );
 }
 
-// ── Dashboard shell ───────────────────────────────────────────────────────────
-function DashboardView({dashboard,parsedFile,activeTab,setActiveTab,doExport,exporting}) {
-  const dept = DEPTS.find(d=>d.id===dashboard.department)??DEPTS[0];
-  const TABS = ["overview","charts","insights","executive","raw data"];
+// ── Overview Tab ──────────────────────────────────────────────────────────────
+function OverviewTab({ dashboard }) {
+  const [selKPI, setSelKPI] = useState(null);
+  const [thresh, setThresh] = useState(0);
 
-  const ExBtn=({type,icon,label})=>(
-    <button className={`btn-ghost ${exporting===type?"key-set":""}`}
-      onClick={()=>doExport(type)} disabled={!!exporting}
-      style={{padding:"7px 13px",fontSize:12.5,color:exporting===type?T.accent:T.text,borderColor:exporting===type?T.accent+"44":T.border}}>
-      {exporting===type?<span className="spin" style={{fontSize:12}}>⟳</span>:icon}
-      {exporting===type?"Exporting…":label}
-    </button>
-  );
-
-  return (
-    <div style={{maxWidth:1360,margin:"0 auto",padding:"24px 18px"}}>
-      <div className="au" style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:22,flexWrap:"wrap",gap:12}}>
-        <div>
-          <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:5}}>
-            <span style={{fontSize:24}}>{dept.icon}</span>
-            <span className="badge" style={{background:dept.color+"16",color:dept.color,border:`1px solid ${dept.color}44`}}>{dept.label}</span>
-            <span className="badge" style={{background:"rgba(255,255,255,.04)",color:T.muted,border:`1px solid ${T.border}`}}>AI Generated</span>
-            {parsedFile&&<span className="badge" style={{background:`${T.accent3}12`,color:T.accent3,border:`1px solid ${T.accent3}33`}}>📁 {parsedFile.fileName}</span>}
-          </div>
-          <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.02em",marginBottom:2}}>{dashboard.title}</h1>
-          <div style={{color:T.muted,fontSize:12.5}}>Period: {dashboard.period} · Generated {dashboard.generatedAt}</div>
-        </div>
-        <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
-          <ExBtn type="xlsx" icon="📊" label="Excel"/>
-          <ExBtn type="pdf"  icon="📄" label="PDF"/>
-          <ExBtn type="pptx" icon="📑" label="PPT"/>
-        </div>
-      </div>
-
-      <div style={{display:"flex",gap:3,marginBottom:22,borderBottom:`1px solid ${T.border}`}}>
-        {TABS.map(t=>(
-          <button key={t} className={`tab-btn ${activeTab===t?"on":""}`} onClick={()=>setActiveTab(t)}>{t}</button>
-        ))}
-      </div>
-
-      {activeTab==="overview"  && <OverviewTab  dashboard={dashboard}/>}
-      {activeTab==="charts"    && <ChartsTab    dashboard={dashboard}/>}
-      {activeTab==="insights"  && <InsightsTab  dashboard={dashboard}/>}
-      {activeTab==="executive" && <ExecutiveTab dashboard={dashboard}/>}
-      {activeTab==="raw data"  && <RawDataTab   dashboard={dashboard} parsedFile={parsedFile}/>}
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════
-// OVERVIEW TAB — animated counters + slider filter + 2 charts
-// ════════════════════════════════════════════════════════════════
-// BUG FIX [4]: useEffect used here — was missing from imports
-function AnimatedNum({value}) {
-  const [disp,setDisp] = useState("0");
-  const num = useMemo(()=>parseFloat(String(value).replace(/[^0-9.-]/g,""))||0,[value]);
-  useEffect(()=>{
-    let raf, start=0, steps=22, inc=num/steps;
-    const tick=()=>{
-      start+=inc;
-      if(start>=num){setDisp(String(value));return;}
-      setDisp(start.toLocaleString(undefined,{maximumFractionDigits:1}));
-      raf=requestAnimationFrame(tick);
-    };
-    raf=requestAnimationFrame(tick);
-    return ()=>cancelAnimationFrame(raf);
-  },[num,value]);
-  return <>{disp}</>;
-}
-
-function OverviewTab({dashboard}) {
-  const [selKPI,  setSelKPI]  = useState(null);
-  const [thresh,  setThresh]  = useState(0);
-  const [pctBars, setPctBars] = useState(false);
-
-  // max value across first 2 charts for slider range
   const maxVal = useMemo(()=>{
-    let m=0;
+    let m = 0;
     (dashboard.charts??[]).slice(0,2).forEach(c=>(c.data??[]).forEach(d=>{if(Number(d.value)>m)m=Number(d.value);}));
-    return m||1000000;
+    return m || 1000;
   },[dashboard.charts]);
 
   const previewCharts = useMemo(()=>
     (dashboard.charts??[]).slice(0,2).map(c=>({
-      ...c,
-      data: thresh>0 ? (c.data??[]).filter(d=>Number(d.value)>=thresh) : (c.data??[])
+      ...c, data: thresh > 0 ? (c.data??[]).filter(d=>Number(d.value)>=thresh) : (c.data??[])
     }))
-  ,[dashboard.charts,thresh]);
+  ,[dashboard.charts, thresh]);
 
   return (
     <div>
-      {/* Summary + quality */}
-      <div className="glass au" style={{padding:"13px 18px",marginBottom:18,display:"flex",gap:14,alignItems:"center",flexWrap:"wrap"}}>
-        <div style={{flex:1,fontSize:14,lineHeight:1.75}}>{dashboard.summary}</div>
-        {dashboard.dataQuality&&(
-          <div style={{textAlign:"center",padding:"9px 18px",borderLeft:`1px solid ${T.border}`,flexShrink:0}}>
-            <div style={{fontWeight:800,fontSize:28,color:(dashboard.dataQuality.score??0)>80?T.accent3:T.warn}}>{dashboard.dataQuality.score}%</div>
-            <div style={{fontSize:9.5,color:T.muted,textTransform:"uppercase",letterSpacing:".07em"}}>Data Quality</div>
-            <div style={{fontSize:10.5,color:T.muted,marginTop:1}}>{dashboard.dataQuality.completeness}</div>
+      <div className="glass au" style={{padding:"14px 20px",marginBottom:18,display:"flex",gap:16,alignItems:"center",flexWrap:"wrap"}}>
+        <div style={{flex:1,fontSize:13.5,lineHeight:1.8,color:T.text}}>{dashboard.summary}</div>
+        {dashboard.dataQuality && (
+          <div style={{textAlign:"center",padding:"10px 20px",borderLeft:`1px solid ${T.border}`,flexShrink:0}}>
+            <div style={{fontWeight:800,fontSize:30,color:(dashboard.dataQuality.score??0)>80?T.accent3:T.warn,fontFamily:"JetBrains Mono"}}>{dashboard.dataQuality.score}%</div>
+            <div style={{fontSize:9,color:T.muted,textTransform:"uppercase",letterSpacing:".08em",marginTop:2}}>Data Quality</div>
+            <div style={{fontSize:10.5,color:T.muted}}>{dashboard.dataQuality.completeness}</div>
           </div>
         )}
       </div>
 
-      {/* ── INTERACTIVE FILTER PANEL ── */}
       <div className="card au1" style={{padding:"14px 18px",marginBottom:16}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
-          <span style={{fontWeight:700,fontSize:13}}>⚙️ Interactive Controls</span>
-          <div style={{display:"flex",gap:6}}>
-            <button className={`ctype-btn ${pctBars?"on":""}`} onClick={()=>setPctBars(v=>!v)}>% Bars</button>
-            <button className="ctype-btn" onClick={()=>{setSelKPI(null);setThresh(0);}}>Reset</button>
-          </div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+          <span style={{fontWeight:700,fontSize:13}}>⚙️ Filters</span>
+          <button className="ctype-btn" onClick={()=>{setSelKPI(null);setThresh(0);}}>Reset</button>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,alignItems:"start"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
           <div>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
               <span style={{fontSize:11,color:T.muted}}>Min Value Threshold</span>
               <span className="mono" style={{color:T.accent,fontSize:11}}>{thresh.toLocaleString()}</span>
             </div>
             <input type="range" className="range-slider" min={0} max={maxVal}
-              step={Math.max(1,Math.round(maxVal/100))}
+              step={Math.max(1, Math.round(maxVal/100))}
               value={thresh} onChange={e=>setThresh(Number(e.target.value))}/>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:9.5,color:T.subtle,marginTop:3}}>
-              <span>0</span><span>{(maxVal/2).toLocaleString(undefined,{maximumFractionDigits:0})}</span><span>{maxVal.toLocaleString(undefined,{maximumFractionDigits:0})}</span>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:T.muted,marginTop:3}}>
+              <span>0</span><span>{maxVal.toLocaleString(undefined,{maximumFractionDigits:0})}</span>
             </div>
           </div>
           <div>
-            <div style={{fontSize:11,color:T.muted,marginBottom:6}}>Click any KPI card to highlight</div>
+            <div style={{fontSize:11,color:T.muted,marginBottom:7}}>Highlight KPI</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
               {(dashboard.kpis??[]).slice(0,6).map((k,i)=>(
                 <button key={i} className={`ctype-btn ${selKPI===i?"on":""}`}
-                  style={{fontSize:10,padding:"3px 8px"}} onClick={()=>setSelKPI(selKPI===i?null:i)}>
+                  style={{fontSize:9.5,padding:"3px 8px"}} onClick={()=>setSelKPI(selKPI===i?null:i)}>
                   {k.label}
                 </button>
               ))}
@@ -854,24 +1007,18 @@ function OverviewTab({dashboard}) {
         </div>
       </div>
 
-      {/* KPI Cards — animated counters + progress bars */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(175px,1fr))",gap:12,marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:11,marginBottom:18}}>
         {(dashboard.kpis??[]).map((kpi,i)=>(
-          <div key={i}
-            className={`kpi-card au ${selKPI===i?"selected":""}`}
-            onClick={()=>setSelKPI(selKPI===i?null:i)}
-            style={{padding:"16px 18px",borderTopWidth:2,borderTopColor:T.colors[i%10],animationDelay:`${i*.04}s`}}>
-            {/* Progress bar at bottom */}
-            <div style={{position:"absolute",bottom:0,left:0,right:0,height:3,background:`${T.colors[i%10]}18`}}>
-              <div style={{height:"100%",background:T.colors[i%10],borderRadius:"0 2px 2px 0",
-                width:pctBars?`${Math.min(100,Math.abs(parseFloat(kpi.change)||50))}%`:"55%",
-                transition:"width .6s ease"}}/>
+          <div key={i} className={`kpi-card au ${selKPI===i?"selected":""}`}
+            style={{padding:"17px 18px",borderTopWidth:3,borderTopColor:T.colors[i%12],animationDelay:`${i*.04}s`}}
+            onClick={()=>setSelKPI(selKPI===i?null:i)}>
+            <div style={{position:"absolute",bottom:0,left:0,right:0,height:3,background:`${T.colors[i%12]}16`}}>
+              <div style={{height:"100%",width:"60%",background:T.colors[i%12],borderRadius:"0 2px 2px 0",transition:"width .6s"}}/>
             </div>
-            <div style={{fontSize:10,color:T.muted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:6,fontWeight:700}}>{kpi.label}</div>
-            <div style={{display:"flex",alignItems:"baseline",gap:3,marginBottom:4}}>
-              {/* BUG FIX [4]: AnimatedNum uses useEffect — was missing from imports */}
-              <span style={{fontWeight:800,fontSize:24}} className="mono"><AnimatedNum value={kpi.value}/></span>
-              {kpi.unit&&kpi.unit!=="units"&&<span style={{fontSize:12,color:T.muted}}>{kpi.unit}</span>}
+            <div style={{fontSize:9.5,color:T.muted,textTransform:"uppercase",letterSpacing:".07em",marginBottom:7,fontWeight:700}}>{kpi.label}</div>
+            <div style={{display:"flex",alignItems:"baseline",gap:3,marginBottom:5}}>
+              <span style={{fontWeight:800,fontSize:23}} className="mono"><AnimatedNum value={kpi.value}/></span>
+              {kpi.unit&&kpi.unit!=="units"&&<span style={{fontSize:11.5,color:T.muted}}>{kpi.unit}</span>}
             </div>
             <div style={{fontSize:11.5,fontWeight:600,color:kpi.trend==="up"?T.accent3:kpi.trend==="down"?T.danger:T.muted}}>
               {kpi.trend==="up"?"▲":kpi.trend==="down"?"▼":"→"} {kpi.change}
@@ -880,13 +1027,12 @@ function OverviewTab({dashboard}) {
         ))}
       </div>
 
-      {/* 2 preview charts */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
         {previewCharts.map((c,i)=>(
           <div key={i} className="card au1" style={{padding:20}}>
             <div style={{fontWeight:700,marginBottom:2,fontSize:14}}>{c.title}</div>
-            <div style={{fontSize:11.5,color:T.muted,marginBottom:13}}>{c.subtitle}</div>
-            <ChartRenderer chart={c} height={190}/>
+            <div style={{fontSize:11.5,color:T.muted,marginBottom:14}}>{c.subtitle}</div>
+            <ChartRenderer chart={c} height={195}/>
           </div>
         ))}
       </div>
@@ -894,78 +1040,55 @@ function OverviewTab({dashboard}) {
   );
 }
 
-// ════════════════════════════════════════════════════════════════
-// CHARTS TAB — all 5 charts + per-chart type switcher + range slider
-// ════════════════════════════════════════════════════════════════
-const CHART_TYPES = [
-  {id:"area",    label:"〰"},
-  {id:"bar",     label:"▌"},
-  {id:"line",    label:"∿"},
-  {id:"pie",     label:"◉"},
-  {id:"radar",   label:"⬡"},
-  {id:"scatter", label:"⠿"},
-];
+// ── Charts Tab ────────────────────────────────────────────────────────────────
+function ChartsTab({ dashboard }) {
+  const [types, setTypes]   = useState({});
+  const [range, setRange]   = useState(100);
 
-function ChartsTab({dashboard}) {
-  const [types,   setTypes]   = useState({});
-  const [range,   setRange]   = useState(100); // % of data points to show
-  const [hovered, setHovered] = useState(null);
-
-  const getType = (chart) => types[chart.id] || chart.type || "bar";
-  const sliceData = (data) => {
-    const n = Math.max(2, Math.round((data??[]).length * range/100));
-    return (data??[]).slice(0,n);
-  };
+  const getType = (c) => types[c.id] || c.type || "bar";
+  const sliceData = (data) => (data??[]).slice(0, Math.max(2, Math.round((data?.length||0)*range/100)));
 
   return (
     <div>
-      {/* Global range slider */}
       <div className="card au" style={{padding:"12px 18px",marginBottom:16,display:"flex",alignItems:"center",gap:18,flexWrap:"wrap"}}>
-        <span style={{fontWeight:600,fontSize:12,color:T.muted,flexShrink:0}}>📊 Controls</span>
+        <span style={{fontWeight:600,fontSize:12,color:T.muted}}>Controls</span>
         <div style={{flex:1,minWidth:200}}>
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-            <span style={{fontSize:10.5,color:T.muted}}>Data points visible</span>
-            <span className="mono" style={{color:T.accent,fontSize:10.5}}>{range}%</span>
+            <span style={{fontSize:10,color:T.muted}}>Data points visible</span>
+            <span className="mono" style={{color:T.accent,fontSize:10}}>{range}%</span>
           </div>
-          <input type="range" className="range-slider" min={20} max={100} step={5}
-            value={range} onChange={e=>setRange(Number(e.target.value))}/>
+          <input type="range" className="range-slider" min={20} max={100} step={5} value={range} onChange={e=>setRange(Number(e.target.value))}/>
         </div>
-        <button className="ctype-btn" onClick={()=>{setTypes({});setRange(100);}}>Reset</button>
+        <button className="ctype-btn" onClick={()=>{setTypes({});setRange(100);}}>Reset All</button>
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(420px,1fr))",gap:16}}>
         {(dashboard.charts??[]).map((chart,i)=>{
-          const type=getType(chart);
-          const data=sliceData(chart.data);
+          const type = getType(chart);
+          const data = sliceData(chart.data);
           return (
-            <div key={i} className="card au"
-              style={{padding:22,animationDelay:`${i*.05}s`,borderColor:hovered===i?T.accent:T.border}}
-              onMouseEnter={()=>setHovered(i)} onMouseLeave={()=>setHovered(null)}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:13,gap:8}}>
+            <div key={i} className="card au" style={{padding:22,animationDelay:`${i*.06}s`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12,gap:8}}>
                 <div style={{minWidth:0}}>
-                  <div style={{fontWeight:700,fontSize:14.5,marginBottom:2}}>{chart.title}</div>
-                  <div style={{fontSize:11.5,color:T.muted}}>{chart.subtitle}</div>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:2}}>{chart.title}</div>
+                  <div style={{fontSize:11,color:T.muted}}>{chart.subtitle}</div>
                 </div>
-                {/* Per-chart type switcher */}
-                <div style={{display:"flex",gap:3,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                <div style={{display:"flex",flexWrap:"wrap",gap:3,justifyContent:"flex-end",flexShrink:0,maxWidth:220}}>
                   {CHART_TYPES.map(ct=>(
-                    <button key={ct.id}
-                      className={`ctype-btn ${type===ct.id?"on":""}`}
-                      style={{padding:"3px 8px",fontSize:11}}
-                      title={ct.id}
+                    <button key={ct.id} className={`ctype-btn ${type===ct.id?"on":""}`}
+                      title={ct.label} style={{padding:"3px 7px",fontSize:9.5}}
                       onClick={()=>setTypes(p=>({...p,[chart.id]:ct.id}))}>
-                      {ct.label}
+                      {ct.icon} {ct.label}
                     </button>
                   ))}
                 </div>
               </div>
-              <ChartRenderer chart={{...chart,type,data}} height={255}/>
-              {/* Data range bar */}
+              <ChartRenderer chart={{...chart, type, data}} height={255}/>
               <div style={{marginTop:10,display:"flex",alignItems:"center",gap:8}}>
                 <div style={{flex:1,height:2,background:T.border,borderRadius:100}}>
                   <div style={{height:"100%",width:`${range}%`,background:`linear-gradient(90deg,${T.accent},${T.accent2})`,borderRadius:100,transition:"width .3s"}}/>
                 </div>
-                <span style={{fontSize:9.5,color:T.muted,flexShrink:0}}>{data.length}/{(chart.data??[]).length} pts</span>
+                <span style={{fontSize:9,color:T.muted}}>{data.length}/{(chart.data??[]).length} pts</span>
               </div>
             </div>
           );
@@ -975,65 +1098,56 @@ function ChartsTab({dashboard}) {
   );
 }
 
-// ── Insights Tab — with filter chips ─────────────────────────────────────────
-function InsightsTab({dashboard}) {
-  const [filter,setFilter]=useState("all");
-  const shown=(dashboard.insights??[]).filter(i=>filter==="all"||i.type===filter);
+// ── Insights Tab ──────────────────────────────────────────────────────────────
+function InsightsTab({ dashboard }) {
+  const [filter, setFilter] = useState("all");
+  const shown = (dashboard.insights??[]).filter(i=>filter==="all"||i.type===filter);
+  const fColors = {positive:T.accent3, negative:T.danger, alert:T.warn, neutral:T.accent};
+
   return (
     <div style={{display:"grid",gridTemplateColumns:"3fr 2fr",gap:18}}>
       <div>
-        <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:14,flexWrap:"wrap"}}>
+        <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:16,flexWrap:"wrap"}}>
           <span style={{fontWeight:800,fontSize:16}}>AI Insights</span>
           {["all","positive","negative","alert","neutral"].map(f=>(
             <button key={f} className={`chip ${filter===f?"on":""}`}
-              style={{"--cc":f==="positive"?T.accent3:f==="negative"?T.danger:f==="alert"?T.warn:T.accent}}
-              onClick={()=>setFilter(f)}>
-              {f}
-            </button>
+              style={{"--cc":fColors[f]||T.accent}} onClick={()=>setFilter(f)}>{f}</button>
           ))}
         </div>
-        {shown.map((ins,i)=>(
-          <div key={i} className="card au"
-            style={{display:"flex",gap:11,padding:"12px 14px",marginBottom:9,animationDelay:`${i*.05}s`,
-              borderLeft:`3px solid ${ins.type==="positive"?T.accent3:ins.type==="negative"?T.danger:ins.type==="alert"?T.warn:T.accent}`,
-              borderRadius:"0 13px 13px 0"}}>
-            <span style={{fontSize:21,flexShrink:0}}>{ins.icon}</span>
-            <div>
-              <span className="badge" style={{marginBottom:4,
-                background:ins.type==="positive"?`${T.accent3}16`:ins.type==="negative"?`${T.danger}16`:ins.type==="alert"?`${T.warn}16`:"rgba(255,255,255,.04)",
-                color:ins.type==="positive"?T.accent3:ins.type==="negative"?T.danger:ins.type==="alert"?T.warn:T.muted}}>
-                {ins.type}
-              </span>
-              <div style={{fontSize:13,lineHeight:1.65}}>{ins.text}</div>
+        {shown.map((ins,i)=>{
+          const bc = fColors[ins.type]||T.accent;
+          return (
+            <div key={i} className="card au" style={{display:"flex",gap:12,padding:"13px 16px",marginBottom:9,animationDelay:`${i*.05}s`,borderLeft:`3px solid ${bc}`,borderRadius:"0 14px 14px 0"}}>
+              <span style={{fontSize:22,flexShrink:0}}>{ins.icon||"📊"}</span>
+              <div>
+                <span className="badge" style={{marginBottom:5,background:`${bc}16`,color:bc,border:`1px solid ${bc}33`}}>{ins.type}</span>
+                <div style={{fontSize:13,lineHeight:1.7}}>{ins.text}</div>
+              </div>
             </div>
-          </div>
-        ))}
-        {!shown.length&&<div style={{color:T.muted,fontSize:13,padding:"16px 0"}}>No insights match this filter.</div>}
+          );
+        })}
+        {!shown.length && <div style={{color:T.muted,padding:"18px 0",fontSize:13}}>No insights match this filter.</div>}
       </div>
       <div>
         <div style={{fontWeight:800,fontSize:16,marginBottom:14}}>Recommendations</div>
         {(dashboard.recommendations??[]).map((rec,i)=>(
-          <div key={i} className="card au"
-            style={{display:"flex",gap:9,padding:"12px 13px",marginBottom:9,animationDelay:`${i*.06}s`,borderColor:`${T.accent}33`}}>
-            <div style={{width:22,height:22,borderRadius:"50%",background:`${T.accent}18`,border:`1px solid ${T.accent}44`,
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:10.5,fontWeight:700,color:T.accent,flexShrink:0,marginTop:1}}>
-              {i+1}
-            </div>
-            <div style={{fontSize:13,lineHeight:1.65}}>{rec}</div>
+          <div key={i} className="card au" style={{display:"flex",gap:10,padding:"12px 14px",marginBottom:8,borderColor:`${T.accent}2A`,animationDelay:`${i*.06}s`}}>
+            <div style={{width:22,height:22,borderRadius:"50%",background:`${T.accent}14`,border:`1px solid ${T.accent}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10.5,fontWeight:700,color:T.accent,flexShrink:0,marginTop:1}}>{i+1}</div>
+            <div style={{fontSize:12.5,lineHeight:1.7}}>{rec}</div>
           </div>
         ))}
-        {dashboard.dataQuality&&(
+        {dashboard.dataQuality && (
           <div className="card" style={{padding:16,marginTop:18}}>
-            <div style={{fontWeight:700,marginBottom:11,fontSize:13.5}}>Data Quality Report</div>
-            <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:7}}>
+            <div style={{fontWeight:700,marginBottom:12,fontSize:13}}>Data Quality</div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:7}}>
               <div style={{flex:1,height:5,background:T.border,borderRadius:100,overflow:"hidden"}}>
                 <div style={{height:"100%",width:`${dashboard.dataQuality.score}%`,background:`linear-gradient(90deg,${T.accent3},${T.accent})`,borderRadius:100}}/>
               </div>
-              <span style={{fontWeight:800,fontSize:17}}>{dashboard.dataQuality.score}%</span>
+              <span style={{fontWeight:800,fontSize:18,fontFamily:"JetBrains Mono"}}>{dashboard.dataQuality.score}%</span>
             </div>
-            <div style={{fontSize:11.5,color:T.muted}}>Completeness: {dashboard.dataQuality.completeness}</div>
-            {(dashboard.dataQuality.issues??[]).map((iss,i)=>(
-              <div key={i} style={{fontSize:11.5,color:T.warn,marginTop:4}}>⚠ {iss}</div>
+            <div style={{fontSize:11,color:T.muted}}>Completeness: {dashboard.dataQuality.completeness}</div>
+            {(dashboard.dataQuality.issues??[]).map((iss,j)=>(
+              <div key={j} style={{fontSize:11,color:T.warn,marginTop:5}}>⚠ {iss}</div>
             ))}
           </div>
         )}
@@ -1043,29 +1157,29 @@ function InsightsTab({dashboard}) {
 }
 
 // ── Executive Tab ─────────────────────────────────────────────────────────────
-function ExecutiveTab({dashboard}) {
+function ExecutiveTab({ dashboard }) {
   return (
-    <div style={{maxWidth:800,margin:"0 auto"}}>
-      <div className="card au" style={{padding:32,marginBottom:18}}>
-        <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:18}}>
-          <div style={{width:38,height:38,borderRadius:9,background:`linear-gradient(135deg,${T.accent},${T.accent2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17}}>🏢</div>
+    <div style={{maxWidth:820,margin:"0 auto"}}>
+      <div className="card au" style={{padding:32,marginBottom:16}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+          <div style={{width:40,height:40,borderRadius:10,background:`linear-gradient(135deg,${T.accent},${T.accent2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:19}}>🏢</div>
           <div>
             <div style={{fontWeight:800,fontSize:16}}>Board Executive Summary</div>
-            <div style={{fontSize:11.5,color:T.muted}}>Period: {dashboard.period}</div>
+            <div style={{fontSize:11,color:T.muted}}>Period: {dashboard.period}</div>
           </div>
         </div>
-        <div style={{fontSize:15,lineHeight:1.9,borderLeft:`3px solid ${T.accent}`,paddingLeft:16,marginBottom:20}}>{dashboard.executiveSummary}</div>
+        <div style={{fontSize:15,lineHeight:1.95,borderLeft:`3px solid ${T.accent}`,paddingLeft:18,marginBottom:22,color:T.text}}>{dashboard.executiveSummary}</div>
         <div style={{fontSize:13.5,lineHeight:1.9,color:T.muted}}>{dashboard.narrative}</div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        {(dashboard.kpis??[]).slice(0,8).map((kpi,i)=>(
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        {(dashboard.kpis??[]).slice(0,10).map((kpi,i)=>(
           <div key={i} className="card" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"13px 16px"}}>
             <div>
-              <div style={{fontSize:10.5,color:T.muted,marginBottom:2,textTransform:"uppercase",letterSpacing:".05em"}}>{kpi.label}</div>
-              <div style={{fontWeight:800,fontSize:19}} className="mono">{kpi.value}{kpi.unit&&kpi.unit!=="units"?" "+kpi.unit:""}</div>
+              <div style={{fontSize:10,color:T.muted,marginBottom:3,textTransform:"uppercase",letterSpacing:".05em"}}>{kpi.label}</div>
+              <div style={{fontWeight:800,fontSize:20,fontFamily:"JetBrains Mono"}}>{kpi.value}{kpi.unit&&kpi.unit!=="units"?" "+kpi.unit:""}</div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{fontSize:19}}>{kpi.trend==="up"?"📈":kpi.trend==="down"?"📉":"➡️"}</div>
+              <div style={{fontSize:20}}>{kpi.trend==="up"?"📈":kpi.trend==="down"?"📉":"➡️"}</div>
               <div style={{fontSize:11.5,fontWeight:700,color:kpi.trend==="up"?T.accent3:kpi.trend==="down"?T.danger:T.muted}}>{kpi.change}</div>
             </div>
           </div>
@@ -1075,32 +1189,26 @@ function ExecutiveTab({dashboard}) {
   );
 }
 
-// ── Raw Data Tab — BUG FIX [1]: T.surface → T.card everywhere ────────────────
-function RawDataTab({dashboard,parsedFile}) {
-  const [search,setSearch]=useState("");
-  const kpis=useMemo(()=>{
-    const q=search.toLowerCase();
+// ── Raw Data Tab ──────────────────────────────────────────────────────────────
+function RawDataTab({ dashboard, parsedFile }) {
+  const [search, setSearch] = useState("");
+  const kpis = useMemo(()=>{
+    const q = search.toLowerCase();
     return (dashboard.kpis??[]).filter(k=>!q||k.label.toLowerCase().includes(q)||String(k.value).includes(q));
-  },[dashboard.kpis,search]);
+  },[dashboard.kpis, search]);
 
   return (
     <div>
-      {/* Search */}
       <input className="field au" value={search} onChange={e=>setSearch(e.target.value)}
-        placeholder="🔍 Search KPIs…"
-        style={{padding:"8px 14px",fontSize:13,marginBottom:14,borderRadius:9}}/>
-
-      {/* KPI table */}
+        placeholder="🔍 Search KPIs…" style={{padding:"9px 14px",fontSize:13,marginBottom:14}}/>
       <div className="card au1" style={{padding:20,marginBottom:18,overflowX:"auto"}}>
-        <div style={{fontWeight:700,fontSize:15,marginBottom:14}}>KPI Data Table</div>
+        <div style={{fontWeight:700,fontSize:14,marginBottom:14}}>KPI Data Table</div>
         <table>
-          <thead><tr>
-            {["Metric","Value","Unit","Trend","Change"].map(h=><th key={h}>{h}</th>)}
-          </tr></thead>
+          <thead><tr>{["Metric","Value","Unit","Trend","Change"].map(h=><th key={h}>{h}</th>)}</tr></thead>
           <tbody>
             {kpis.map((k,i)=>(
               <tr key={i}>
-                <td style={{fontWeight:500}}>{k.label}</td>
+                <td style={{fontWeight:600}}>{k.label}</td>
                 <td className="mono" style={{color:T.accent}}>{k.value}</td>
                 <td style={{color:T.muted}}>{k.unit}</td>
                 <td>{k.trend==="up"?"▲ up":k.trend==="down"?"▼ down":"→ stable"}</td>
@@ -1111,16 +1219,15 @@ function RawDataTab({dashboard,parsedFile}) {
         </table>
       </div>
 
-      {/* Chart data tables */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))",gap:12,marginBottom:18}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))",gap:11,marginBottom:18}}>
         {(dashboard.charts??[]).map((c,i)=>(
           <div key={i} className="card" style={{padding:16}}>
             <div style={{fontWeight:700,marginBottom:10,fontSize:13}}>{c.title}</div>
             <table style={{fontSize:11.5}}>
               <thead><tr>
-                <th style={{fontSize:9.5}}>Label</th>
-                <th style={{fontSize:9.5,textAlign:"right"}}>Value</th>
-                {(c.data??[]).some(d=>d.secondary!=null)&&<th style={{fontSize:9.5,textAlign:"right"}}>2nd</th>}
+                <th style={{fontSize:9}}>Label</th>
+                <th style={{fontSize:9,textAlign:"right"}}>Value</th>
+                {(c.data??[]).some(d=>d.secondary!=null)&&<th style={{fontSize:9,textAlign:"right"}}>2nd</th>}
               </tr></thead>
               <tbody>
                 {(c.data??[]).map((row,j)=>(
@@ -1136,31 +1243,23 @@ function RawDataTab({dashboard,parsedFile}) {
         ))}
       </div>
 
-      {/* Source sheet previews — BUG FIX [1]: was background:T.surface (undefined) */}
       {parsedFile && Object.entries(parsedFile.sheets).map(([name,sheet])=>(
         <div key={name} className="card au2" style={{padding:18,marginBottom:12,overflowX:"auto"}}>
-          <div style={{fontWeight:700,marginBottom:11,fontSize:13}}>📄 Source: "{name}" — {sheet.rowCount} rows</div>
-          {(sheet.raw??[]).length>0&&(
+          <div style={{fontWeight:700,marginBottom:11,fontSize:13}}>📄 "{name}" — {sheet.rowCount} rows</div>
+          {(sheet.raw??[]).length>0 && (
             <table style={{fontSize:10.5}}>
-              <thead><tr>
-                {(sheet.raw[0]??[]).map((h,i)=>(
-                  /* BUG FIX [1]: was background:T.surface — T.surface was undefined and crashed React */
-                  <th key={i} style={{background:T.card}}>{h||`Col ${i+1}`}</th>
-                ))}
-              </tr></thead>
+              <thead>
+                <tr>{(sheet.raw[0]??[]).map((h,i)=><th key={i} style={{background:T.card}}>{h||`Col ${i+1}`}</th>)}</tr>
+              </thead>
               <tbody>
-                {sheet.raw.slice(1,18).map((row,ri)=>(
+                {sheet.raw.slice(1,20).map((row,ri)=>(
                   <tr key={ri}>
                     {row.map((cell,ci)=>(
-                      <td key={ci} className="mono" style={{whiteSpace:"nowrap",maxWidth:150,overflow:"hidden",textOverflow:"ellipsis"}}>
-                        {String(cell??"")}
-                      </td>
+                      <td key={ci} className="mono" style={{whiteSpace:"nowrap",maxWidth:140,overflow:"hidden",textOverflow:"ellipsis"}}>{String(cell??"")}</td>
                     ))}
                   </tr>
                 ))}
-                {sheet.raw.length>18&&(
-                  <tr><td colSpan={(sheet.raw[0]??[]).length} style={{color:T.muted,padding:"7px 12px"}}>…{sheet.raw.length-18} more rows</td></tr>
-                )}
+                {sheet.raw.length>20&&<tr><td colSpan={(sheet.raw[0]??[]).length} style={{color:T.muted}}>…{sheet.raw.length-20} more rows</td></tr>}
               </tbody>
             </table>
           )}
@@ -1170,121 +1269,276 @@ function RawDataTab({dashboard,parsedFile}) {
   );
 }
 
-// ════════════════════════════════════════════════════════════════
-// CHART RENDERER — 6 types: area, bar, line, pie, radar, scatter
-// BUG FIX [5]: ScatterChart now imported and implemented
-// ════════════════════════════════════════════════════════════════
-const TT_STYLE = {
-  contentStyle:{background:T.card,border:`1px solid ${T.border}`,borderRadius:8,fontSize:11.5,fontFamily:"Plus Jakarta Sans,sans-serif"},
-  labelStyle:{color:T.muted},
-  itemStyle:{color:T.text},
-  cursor:{fill:`${T.accent}08`},
-};
+// ── Dashboard Shell ───────────────────────────────────────────────────────────
+function DashboardView({ dashboard, parsedFile, activeTab, setActiveTab, doExport, exporting }) {
+  const dept = DEPTS.find(d=>d.id===dashboard.department) ?? DEPTS[0];
+  const TABS = ["overview","charts","insights","executive","raw data"];
+  const ExBtn = ({type,icon,label}) => (
+    <button className={`btn-ghost ${exporting===type?"key-set":""}`}
+      onClick={()=>doExport(type)} disabled={!!exporting}
+      style={{fontSize:12,padding:"7px 13px"}}>
+      {exporting===type?<span className="spin">⟳</span>:icon}
+      {exporting===type?"Exporting…":label}
+    </button>
+  );
+  return (
+    <div style={{maxWidth:1380,margin:"0 auto",padding:"22px 18px"}}>
+      <div className="au" style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:12}}>
+        <div>
+          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+            <span style={{fontSize:22}}>{dept.icon}</span>
+            <span className="badge" style={{background:dept.color+"16",color:dept.color,border:`1px solid ${dept.color}44`}}>{dept.label}</span>
+            <span className="badge" style={{background:"rgba(255,255,255,.04)",color:T.muted,border:`1px solid ${T.border}`}}>AI Generated</span>
+            {parsedFile&&<span className="badge" style={{background:`${T.accent3}10`,color:T.accent3,border:`1px solid ${T.accent3}33`}}>📁 {parsedFile.fileName}</span>}
+          </div>
+          <h1 style={{fontWeight:800,fontSize:22,letterSpacing:"-.02em",marginBottom:3}}>{dashboard.title}</h1>
+          <div style={{color:T.muted,fontSize:12}}>Period: {dashboard.period} · Generated {dashboard.generatedAt}</div>
+        </div>
+        <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+          <ExBtn type="xlsx" icon="📊" label="Excel"/>
+          <ExBtn type="pdf"  icon="📄" label="PDF"/>
+          <ExBtn type="pptx" icon="📑" label="PowerPoint"/>
+        </div>
+      </div>
 
-function ChartRenderer({chart,height=255}) {
-  const data      = chart?.data ?? [];
-  const type      = chart?.type ?? "bar";
-  const hasSec    = data.some(d=>d.secondary!=null && d.secondary!=="");
+      <div style={{display:"flex",gap:2,marginBottom:20,borderBottom:`1px solid ${T.border}`,overflowX:"auto"}}>
+        {TABS.map(t=>(
+          <button key={t} className={`tab-btn ${activeTab===t?"on":""}`} onClick={()=>setActiveTab(t)}>{t}</button>
+        ))}
+      </div>
 
-  if (!data.length) return (
-    <div style={{height,display:"flex",alignItems:"center",justifyContent:"center",color:T.muted,fontSize:12.5}}>
-      No data available
+      {activeTab==="overview"   && <OverviewTab  dashboard={dashboard}/>}
+      {activeTab==="charts"     && <ChartsTab    dashboard={dashboard}/>}
+      {activeTab==="insights"   && <InsightsTab  dashboard={dashboard}/>}
+      {activeTab==="executive"  && <ExecutiveTab dashboard={dashboard}/>}
+      {activeTab==="raw data"   && <RawDataTab   dashboard={dashboard} parsedFile={parsedFile}/>}
     </div>
   );
+}
 
-  // ── Scatter — BUG FIX [5] ──
-  if (type==="scatter") {
-    const pts=data.map(d=>({x:parseFloat(d.value)||0,y:parseFloat(d.secondary)||0,name:d.name}));
-    return (
-      <ResponsiveContainer width="100%" height={height}>
-        <ScatterChart>
-          <CartesianGrid strokeDasharray="3 3" stroke={T.border} opacity={.5}/>
-          <XAxis type="number" dataKey="x" tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false} name="Value"/>
-          <YAxis type="number" dataKey="y" tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false} name="Secondary"/>
-          <ZAxis range={[40,200]}/>
-          <Tooltip {...TT_STYLE} content={({payload})=>{
-            if(!payload?.length) return null;
-            const p=payload[0].payload;
-            return <div style={TT_STYLE.contentStyle}><b style={{color:T.text,display:"block",marginBottom:3}}>{p.name}</b><span style={{color:T.accent}}>x:{p.x}</span> · <span style={{color:T.accent2}}>y:{p.y}</span></div>;
-          }}/>
-          <Scatter data={pts} fill={T.accent} fillOpacity={.75}/>
-        </ScatterChart>
-      </ResponsiveContainer>
-    );
-  }
+// ══════════════════════════════════════════════════════════════════
+// MAIN APP
+// ══════════════════════════════════════════════════════════════════
+export default function App() {
+  const [screen,    setScreen]    = useState("input");
+  const [parsedFile,setParsedFile]= useState(null);
+  const [rawText,   setRawText]   = useState("");
+  const [dept,      setDept]      = useState(null);
+  const [dragOver,  setDragOver]  = useState(false);
+  const [stepMsg,   setStepMsg]   = useState("");
+  const [pct,       setPct]       = useState(0);
+  const [dashboard, setDashboard] = useState(null);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [error,     setError]     = useState(null);
+  const [exporting, setExporting] = useState(null);
+  const [apiKey,    setApiKey]    = useState("");
+  const [showKey,   setShowKey]   = useState(false);
+  const fileRef = useRef();
 
-  if (type==="pie") return (
-    <ResponsiveContainer width="100%" height={height}>
-      <PieChart>
-        <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%"
-          outerRadius={height*.36} innerRadius={height*.18} paddingAngle={2} strokeWidth={0}>
-          {data.map((_,i)=><Cell key={i} fill={T.colors[i%T.colors.length]}/>)}
-        </Pie>
-        <Tooltip {...TT_STYLE}/><Legend wrapperStyle={{fontSize:11,color:T.muted}}/>
-      </PieChart>
-    </ResponsiveContainer>
-  );
+  const handleFile = useCallback(async (file) => {
+    if (!file) return;
+    setError(null);
+    try {
+      const parsed = await parseFile(file);
+      setParsedFile(parsed);
+      if (parsed.type === "pdf" && parsed.rawText) {
+        setRawText(parsed.rawText.slice(0,3000));
+      } else {
+        const preview = Object.entries(parsed.sheets)
+          .map(([n,s])=>`=== Sheet: ${n} (${s.rowCount} rows) ===\n${sheetToText(s,14)}`)
+          .join("\n\n");
+        setRawText(preview.slice(0,3200));
+      }
+    } catch(err) {
+      setError("Could not read file — try saving as .csv and re-uploading.");
+    }
+  }, []);
 
-  if (type==="radar") return (
-    <ResponsiveContainer width="100%" height={height}>
-      <RadarChart data={data}>
-        <PolarGrid stroke={T.border}/>
-        <PolarAngleAxis dataKey="name" tick={{fill:T.muted,fontSize:10}}/>
-        <PolarRadiusAxis tick={{fill:T.muted,fontSize:9}}/>
-        <Radar dataKey="value" stroke={T.accent} fill={T.accent} fillOpacity={.16} name="Value"/>
-        {hasSec&&<Radar dataKey="secondary" stroke={T.accent2} fill={T.accent2} fillOpacity={.1} name="Target"/>}
-        <Tooltip {...TT_STYLE}/>{hasSec&&<Legend wrapperStyle={{fontSize:11,color:T.muted}}/>}
-      </RadarChart>
-    </ResponsiveContainer>
-  );
+  const onDrop = useCallback(async (e) => {
+    e.preventDefault(); setDragOver(false);
+    const file = e.dataTransfer?.files?.[0] ?? e.target?.files?.[0];
+    if (file) await handleFile(file);
+  }, [handleFile]);
 
-  if (type==="bar") return (
-    <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} barGap={2}>
-        <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
-        <XAxis dataKey="name" tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
-        <YAxis tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
-        <Tooltip {...TT_STYLE}/>{hasSec&&<Legend wrapperStyle={{fontSize:11,color:T.muted}}/>}
-        <Bar dataKey="value" fill={T.accent} radius={[5,5,0,0]} name="Value"/>
-        {hasSec&&<Bar dataKey="secondary" fill={T.accent2} radius={[5,5,0,0]} name="Target"/>}
-      </BarChart>
-    </ResponsiveContainer>
-  );
+  const generate = async () => {
+    if (!rawText.trim() && !parsedFile) return;
+    setScreen("processing"); setError(null); setPct(8);
 
-  if (type==="line") return (
-    <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
-        <XAxis dataKey="name" tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
-        <YAxis tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
-        <Tooltip {...TT_STYLE}/>{hasSec&&<Legend wrapperStyle={{fontSize:11,color:T.muted}}/>}
-        <Line type="monotone" dataKey="value" stroke={T.accent} strokeWidth={2.5} dot={{fill:T.accent,r:3.5,strokeWidth:0}} name="Value"/>
-        {hasSec&&<Line type="monotone" dataKey="secondary" stroke={T.accent2} strokeWidth={2} strokeDasharray="5 4" dot={{fill:T.accent2,r:3,strokeWidth:0}} name="Target"/>}
-      </LineChart>
-    </ResponsiveContainer>
-  );
+    let dataContext = "";
+    if (parsedFile) {
+      dataContext += `FILE: ${parsedFile.fileName}\nRows: ${parsedFile.totalRows}\nSheets: ${parsedFile.sheetNames.join(", ")}\n\n`;
+      if (parsedFile.rawText) {
+        dataContext += parsedFile.rawText.slice(0,4000);
+      } else {
+        Object.entries(parsedFile.sheets).forEach(([name,s])=>{
+          dataContext += `\n=== ${name} (${s.rowCount} rows) ===\n${sheetToText(s,40)}\n`;
+        });
+      }
+    } else {
+      dataContext = rawText.slice(0,4800);
+    }
 
-  // area (default)
+    try {
+      setStepMsg("🔍 Pass 1 — Ingesting & structuring data..."); setPct(18);
+
+      const raw = await callClaude(
+        "You are a senior ERP data analyst. Respond ONLY with valid JSON — no markdown, no fences, no extra text.",
+        `Analyse this business data and extract every meaningful metric and pattern.
+
+DATA:
+${dataContext}
+
+Department hint: ${dept ?? "auto-detect"}
+
+Return ONLY valid JSON with this exact shape:
+{
+  "department":"sales|hr|operations|finance|marketing|supply|it|executive",
+  "title":"Precise descriptive title",
+  "period":"Detected period e.g. Q1-Q4 2023",
+  "summary":"2-sentence summary of what this data shows",
+  "kpis":[{"label":"name","value":"actual figure","unit":"$|%|units|hrs","trend":"up|down|stable","change":"+12.3% MoM"}],
+  "charts":[
+    {"id":"c1","type":"area|bar|line|pie|radar|scatter|treemap|gauge|funnel|heatmap|waterfall|donut|radialbar|composed|semipie","title":"title","subtitle":"description",
+     "data":[{"name":"label","value":123,"secondary":45}]}
+  ],
+  "insights":[{"type":"positive|negative|neutral|alert","text":"Specific insight with real numbers from the data","icon":"emoji"}],
+  "recommendations":["Specific actionable recommendation grounded in data"],
+  "dataQuality":{"score":85,"issues":["list issues"],"completeness":"92%"},
+  "executiveSummary":"4-5 sentence board narrative with specific numbers from data"
+}
+
+STRICT RULES:
+- Use ONLY actual values from the data — never invent numbers
+- 8-12 KPIs drawn from real columns
+- Exactly 6 charts with 7-12 data points each minimum
+- Chart 1: area or line — main time series or trend
+- Chart 2: bar — category comparison  
+- Chart 3: pie or donut — share/composition breakdown
+- Chart 4: radar — multi-dimension performance scores
+- Chart 5: scatter or bubble — correlation analysis
+- Chart 6: funnel, treemap, gauge, or heatmap — structural/hierarchical view
+- 7-9 insights with actual numbers from the data
+- 4-6 recommendations grounded in data patterns
+- Synthesise across all sheets if multiple`,
+        5200, apiKey
+      );
+
+      setPct(68); setStepMsg("🧠 Pass 2 — Generating board narrative...");
+
+      let parsed;
+      try {
+        const cleaned = raw.replace(/```json\s*/gi,"").replace(/```\s*/gi,"").trim();
+        parsed = JSON.parse(cleaned);
+      } catch {
+        const m = raw.match(/\{[\s\S]*\}/);
+        if (m) {
+          try { parsed = JSON.parse(m[0]); }
+          catch { throw new Error("AI returned malformed JSON — simplify your data and retry."); }
+        } else {
+          throw new Error("AI returned malformed JSON — simplify your data and retry.");
+        }
+      }
+
+      const narrative = await callClaude(
+        "You are a CFO. Write concise, data-driven board narrative. No bullet points. 4-5 sentences. Specific numbers only.",
+        `Write CFO narrative for ${parsed.department} dept.
+KPIs: ${JSON.stringify((parsed.kpis??[]).slice(0,6))}
+Key insights: ${JSON.stringify((parsed.insights??[]).slice(0,4))}
+Top rec: ${(parsed.recommendations??[])[0]||""}
+Be specific with numbers. Cover context, performance, and direction.`,
+        500, apiKey
+      );
+
+      setPct(96); setStepMsg("✅ Building dashboard...");
+      await new Promise(r=>setTimeout(r,400));
+
+      setDashboard({...parsed, narrative, generatedAt: new Date().toLocaleString(), _totalRows: parsedFile?.totalRows??"N/A"});
+      setActiveTab("overview");
+      setScreen("dashboard");
+    } catch(err) {
+      setError(err.message || "Generation failed — please try again.");
+      setScreen("input");
+    }
+  };
+
+  const doExport = async (type) => {
+    setExporting(type);
+    try {
+      if (type==="xlsx")     exportExcel(dashboard, parsedFile);
+      else if (type==="pdf") exportPDF(dashboard);
+      else if (type==="pptx") await exportPPTX(dashboard);
+    } catch(err) {
+      alert(`Export error: ${err.message}\n\nTip: allow pop-ups for PDF/PPT export.`);
+    } finally {
+      setTimeout(()=>setExporting(null), 2000);
+    }
+  };
+
+  const reset = () => {
+    setScreen("input"); setDashboard(null); setParsedFile(null);
+    setRawText(""); setDept(null); setError(null); setPct(0);
+  };
+
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data}>
-        <defs>
-          <linearGradient id={`ga${chart.id}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%"  stopColor={T.accent}  stopOpacity={.26}/>
-            <stop offset="95%" stopColor={T.accent}  stopOpacity={0}/>
-          </linearGradient>
-          <linearGradient id={`gb${chart.id}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%"  stopColor={T.accent2} stopOpacity={.2}/>
-            <stop offset="95%" stopColor={T.accent2} stopOpacity={0}/>
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
-        <XAxis dataKey="name" tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
-        <YAxis tick={{fill:T.muted,fontSize:10}} axisLine={false} tickLine={false}/>
-        <Tooltip {...TT_STYLE}/>{hasSec&&<Legend wrapperStyle={{fontSize:11,color:T.muted}}/>}
-        <Area type="monotone" dataKey="value" stroke={T.accent} fill={`url(#ga${chart.id})`} strokeWidth={2.5} name="Value"/>
-        {hasSec&&<Area type="monotone" dataKey="secondary" stroke={T.accent2} fill={`url(#gb${chart.id})`} strokeWidth={2} name="Target"/>}
-      </AreaChart>
-    </ResponsiveContainer>
+    <>
+      <style>{STYLE}</style>
+      <div style={{minHeight:"100vh"}}>
+        {/* Header */}
+        <div style={{height:58,borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",position:"sticky",top:0,zIndex:100,background:T.bg}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:34,height:34,borderRadius:10,background:`linear-gradient(135deg,${T.accent},${T.accent2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>⚡</div>
+            <div>
+              <div style={{fontWeight:800,fontSize:14.5,letterSpacing:"-.01em"}}>NEXUS ERP</div>
+              <div style={{fontSize:9,color:T.muted,letterSpacing:".08em",textTransform:"uppercase"}}>AI Dashboard Intelligence</div>
+            </div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span className="badge" style={{background:`${T.accent}10`,color:T.accent,border:`1px solid ${T.accent}2E`}}>
+              <span className="pulse-dot" style={{width:5,height:5,borderRadius:"50%",background:T.accent}}/>
+              RAG ACTIVE
+            </span>
+            <button className={`btn-ghost ${apiKey?"key-set":""}`} onClick={()=>setShowKey(v=>!v)}
+              style={{fontSize:11.5,padding:"5px 12px",color:apiKey?T.accent3:T.muted}}>
+              🔑 {apiKey?"Key ✓":"API Key"}
+            </button>
+            {screen==="dashboard" && (
+              <button className="btn-ghost" onClick={reset} style={{fontSize:11.5,padding:"5px 12px"}}>← New</button>
+            )}
+          </div>
+        </div>
+
+        {/* API Key Panel */}
+        {showKey && (
+          <div style={{background:T.card,borderBottom:`1px solid ${T.border}`,padding:"13px 24px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+            <div style={{fontSize:12,color:T.muted,flex:1,lineHeight:1.7,minWidth:220}}>
+              <b style={{color:T.text}}>GitHub Pages / self-hosted:</b> Provide your Anthropic API key below.
+              Stored in memory only — never logged or transmitted.
+              {" "}<a href="https://console.anthropic.com" target="_blank" rel="noreferrer" style={{color:T.accent,textDecoration:"none"}}>Get a key →</a>
+            </div>
+            <input className="field" type="password" placeholder="sk-ant-api03-…"
+              value={apiKey} onChange={e=>setApiKey(e.target.value)}
+              style={{padding:"8px 13px",fontSize:12.5,width:290}}/>
+            <button className="btn-ghost" onClick={()=>setApiKey("")} style={{padding:"5px 10px",fontSize:11}}>Clear</button>
+            <button className="btn-ghost" onClick={()=>setShowKey(false)}
+              style={{padding:"5px 12px",fontSize:11,color:T.accent3,borderColor:`${T.accent3}44`}}>Done ✓</button>
+          </div>
+        )}
+
+        {screen==="processing" && <ProcessingView stepMsg={stepMsg} pct={pct}/>}
+        {screen==="input" && (
+          <InputView rawText={rawText} setRawText={setRawText}
+            parsedFile={parsedFile} setParsedFile={setParsedFile}
+            dept={dept} setDept={setDept}
+            dragOver={dragOver} setDragOver={setDragOver}
+            fileRef={fileRef} onDrop={onDrop}
+            onGenerate={generate} error={error} setError={setError}/>
+        )}
+        {screen==="dashboard" && dashboard && (
+          <DashboardView dashboard={dashboard} parsedFile={parsedFile}
+            activeTab={activeTab} setActiveTab={setActiveTab}
+            doExport={doExport} exporting={exporting}/>
+        )}
+      </div>
+    </>
   );
 }
