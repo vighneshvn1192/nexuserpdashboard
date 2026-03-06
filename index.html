@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NEXUS ERP — Power BI × AI Intelligence</title>
-  
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="description" content="NEXUS ERP — Enterprise Power BI × AI Dashboard. Advanced RAG Data Analysis." />
+  <title>NEXUS ERP — Enterprise AI Dashboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -19,122 +20,80 @@
   <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
   <style>
+    /** * NEXUS ERP DESIGN SYSTEM v3.0
+     * Deep Blue Enterprise Theme
+     */
     :root {
       --bg: #060A12;
       --card: #0C1422;
       --card-alt: #111B2D;
       --border: #1A2B40;
+      --border-bright: #2A3B50;
       --accent: #00D4FF;
-      --accent-glow: rgba(0, 212, 255, 0.3);
+      --accent-glow: rgba(0, 212, 255, 0.2);
       --accent2: #7C3AED;
+      --accent3: #10B981;
       --text: #E2EBF6;
       --muted: #4A6585;
-      --success: #10B981;
       --danger: #EF4444;
+      --warn: #F59E0B;
+      --glass: rgba(255, 255, 255, 0.02);
+      --font-main: 'DM Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { 
-      background: var(--bg); 
-      color: var(--text); 
-      font-family: 'DM Sans', sans-serif; 
-      line-height: 1.6;
-      overflow-x: hidden;
-      min-height: 100vh;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+    html, body { background: var(--bg); color: var(--text); font-family: var(--font-main); min-height: 100vh; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
 
-    /* ── Layout ── */
-    .app-shell { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
-    .top-nav {
-      height: 70px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 30px;
-      position: sticky;
-      top: 0;
-      background: rgba(6, 10, 18, 0.8);
-      backdrop-filter: blur(12px);
-      z-index: 100;
-    }
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
-    /* ── UI Components ── */
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px;
-      transition: all 0.3s ease;
-    }
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 20px;
-      margin-bottom: 30px;
-    }
-    .kpi-tile {
-      padding: 24px;
-      border-left: 4px solid var(--accent);
-      background: var(--card-alt);
-    }
-    .kpi-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
-    .kpi-value { font-size: 28px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
-    
-    .btn {
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-weight: 700;
-      cursor: pointer;
-      border: 1px solid var(--border);
-      font-family: inherit;
-      transition: 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .btn-primary { background: var(--accent); color: #000; border: none; }
-    .btn-primary:hover { box-shadow: 0 0 20px var(--accent-glow); transform: translateY(-1px); }
-    .btn-outline { background: transparent; color: var(--text); }
-    .btn-outline:hover { background: var(--border); }
-
-    .input-field {
-      width: 100%;
-      background: #08101C;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      color: var(--text);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-      resize: vertical;
-      min-height: 200px;
-    }
-
-    /* ── Animation ── */
-    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    .animate-up { animation: slideUp 0.5s ease forwards; }
-
-    /* ── Loading Overlay ── */
-    .overlay {
-      position: fixed;
-      inset: 0;
-      background: var(--bg);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-    .loader {
-      width: 48px;
-      height: 48px;
-      border: 4px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
+    /* ── ANIMATIONS ── */
+    @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes glow { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-up { animation: slideIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+    .pulse { animation: glow 2s ease-in-out infinite; }
+    .spin { animation: spin 1s linear infinite; }
+
+    /* ── CORE UI ── */
+    .app-shell { display: flex; flex-direction: column; min-height: 100vh; }
+    .top-bar { height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: rgba(6, 10, 18, 0.85); backdrop-filter: blur(15px); z-index: 1000; }
+    .main-content { flex: 1; max-width: 1500px; width: 100%; margin: 0 auto; padding: 40px 20px; }
+    
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 30px; position: relative; overflow: hidden; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 40px; }
+    .kpi-tile { padding: 25px; border-radius: 18px; border: 1px solid var(--border); background: var(--card-alt); position: relative; }
+    .kpi-label { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 10px; }
+    .kpi-value { font-size: 34px; font-weight: 800; font-family: var(--font-mono); margin-bottom: 5px; }
+    .kpi-change { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+    .up { color: var(--accent3); }
+    .down { color: var(--danger); }
+
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; border: 1px solid var(--border); font-family: inherit; font-size: 14px; }
+    .btn-p { background: var(--accent); color: #000; border: none; }
+    .btn-p:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--accent-glow); }
+    .btn-s { background: var(--glass); color: var(--text); }
+    .btn-s:hover { border-color: var(--accent); }
+
+    .input-area { width: 100%; min-height: 250px; background: #08101C; border: 1px solid var(--border); border-radius: 14px; padding: 24px; color: var(--text); font-family: var(--font-mono); font-size: 13px; line-height: 1.7; resize: vertical; }
+    .input-area:focus { border-color: var(--accent); }
+
+    .overlay { position: fixed; inset: 0; background: var(--bg); z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .loader { width: 56px; height: 56px; border: 4px solid var(--border); border-top-color: var(--accent); border-radius: 50%; }
+
+    .badge { font-size: 10px; padding: 4px 10px; border-radius: 5px; background: var(--accent2); color: #fff; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; }
+    .narrative-box { background: rgba(0,0,0,0.2); border-left: 4px solid var(--accent); padding: 30px; border-radius: 14px; font-size: 16px; line-height: 1.9; color: #B0C0D0; white-space: pre-wrap; }
+
+    /* ── POWER BI PANELS ── */
+    .viz-panel { display: grid; grid-template-columns: 1.8fr 1fr; gap: 30px; margin-top: 30px; }
+    .chart-box { min-height: 450px; }
+    .tab-nav { display: flex; gap: 10px; border-bottom: 1px solid var(--border); margin-bottom: 30px; }
+    .tab { padding: 12px 24px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; transition: 0.2s; font-weight: 600; }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(0,212,255,0.05); }
   </style>
 </head>
 <body>
@@ -142,75 +101,100 @@
 <div id="root"></div>
 
 <script type="text/babel">
-  const { useState, useEffect, useRef, useMemo } = React;
+  /**
+   * NEXUS ERP PRO v3.0 - AI ARCHITECTURE
+   * Written with high-fidelity React implementation.
+   */
+  const { useState, useEffect, useRef, useMemo, useCallback, useReducer } = React;
   
-  // ── RECHARTS MAPPING ──
+  // ── RECHARTS GLOBAL HOOK ──
   const { 
-    AreaChart, Area, BarChart, Bar, XAxis, YAxis, 
-    CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie 
+    AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
+    ResponsiveContainer, Cell, PieChart, Pie, Legend, ComposedChart, Line 
   } = window.Recharts;
 
+  // ── UTILITIES & ENGINE ──
+  const PDFJS_VER = '3.11.174';
+
+  const formatValue = (val) => {
+    const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+    if (isNaN(num)) return val;
+    return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(num);
+  };
+
   function App() {
-    const [view, setView] = useState('input');
+    const [screen, setScreen] = useState('landing');
     const [apiKey, setApiKey] = useState('');
-    const [dataContent, setDataContent] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [step, setStep] = useState('');
+    const [dataInput, setDataInput] = useState('');
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [pipelineStep, setPipelineStep] = useState('');
     const [dashboard, setDashboard] = useState(null);
     const [error, setError] = useState(null);
+    const [activeTab, setActiveTab] = useState('intelligence');
+    const fileRef = useRef();
 
-    // ── RAG LOGIC: DATA INGESTION ──
-    const handleFile = async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      setStep('Ingesting file...');
-      const reader = new FileReader();
-
-      if (file.name.endsWith('.pdf')) {
-        const PDFJS_VER = '3.11.174';
-        setStep('Loading PDF Engine...');
+    // ── RAG INGESTION: PDF WORKER ──
+    const handlePDF = async (file) => {
+      setPipelineStep('Initing PDF Engine...');
+      try {
         await new Promise(res => {
+          if (window.pdfjsLib) return res();
           const s = document.createElement('script');
           s.src = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VER}/pdf.min.js`;
           s.onload = res; document.head.appendChild(s);
         });
         const pdfjsLib = window['pdfjs-dist/build/pdf'];
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VER}/pdf.worker.min.js`;
-        
-        reader.onload = async () => {
-          const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(reader.result) }).promise;
-          let text = "";
-          for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
-            const page = await pdf.getPage(i);
-            const content = await page.getTextContent();
-            text += content.items.map(s => s.str).join(" ") + "\n";
-          }
-          setDataContent(text);
-          setStep('PDF parsed successfully.');
-        };
-        reader.readAsArrayBuffer(file);
-      } else {
-        reader.onload = (e) => {
-          const wb = XLSX.read(e.target.result, { type: 'binary' });
-          const ws = wb.Sheets[wb.SheetNames[0]];
-          setDataContent(XLSX.utils.sheet_to_csv(ws));
-          setStep('Excel parsed successfully.');
-        };
-        reader.readAsBinaryString(file);
-      }
+
+        const buffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+        let text = "";
+        for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+          setPipelineStep(`Parsing PDF Page ${i}/${pdf.numPages}...`);
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(s => s.str).join(" ") + "\n";
+        }
+        setDataInput(text);
+        setPipelineStep('PDF Analysis Complete.');
+      } catch (err) { setError("Critical Error: PDF parsing failed."); }
     };
 
-    // ── RAG LOGIC: DUAL-PASS ANALYSIS ──
-    const generateIntelligence = async () => {
-      if (!apiKey) return alert("Please enter your Anthropic API Key.");
-      setLoading(true);
+    // ── RAG INGESTION: EXCEL WORKBOOK ──
+    const handleExcel = (file) => {
+      setPipelineStep('Ingesting Workbook...');
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const wb = XLSX.read(e.target.result, { type: 'binary' });
+        let out = "";
+        wb.SheetNames.forEach(n => {
+          out += `\n[SHEET: ${n}]\n` + XLSX.utils.sheet_to_csv(wb.Sheets[n]);
+        });
+        setDataInput(out);
+        setPipelineStep('Excel Context Loaded.');
+      };
+      reader.readAsBinaryString(file);
+    };
+
+    const onFileDrop = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.type === 'application/pdf') handlePDF(file);
+      else handleExcel(file);
+    };
+
+    // ── CORE RAG PIPELINE: DUAL-PASS EXECUTION ──
+    const executeIntelligence = async () => {
+      if (!apiKey) return alert("Anthropic API Key Required.");
+      if (!dataInput) return alert("No Data Context Provided.");
+
+      setIsAnalyzing(true);
       setError(null);
 
       try {
-        // PASS 1: Structural Extraction
-        setStep('Pass 1: Identifying KPI structures...');
-        const extractRes = await fetch("https://api.anthropic.com/v1/messages", {
+        // PASS 1: Extraction & Structuring
+        setPipelineStep('Pass 1: RAG Extraction...');
+        const r1 = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -220,25 +204,30 @@
           },
           body: JSON.stringify({
             model: "claude-3-5-sonnet-20241022",
-            max_tokens: 3000,
-            system: "You are a senior ERP analyst. Output ONLY raw JSON.",
-            messages: [{ role: "user", content: `Convert this data into a JSON object with: 
-              { "title": "Dashboard Title", 
-                "kpis": [{"label": "Metric", "value": "Val", "trend": "up|down", "change": "+X%"}], 
-                "charts": [{"type": "bar|area", "title": "Chart Title", "data": [{"name": "Label", "value": 100}]}] 
-              }. DATA: ${dataContent.slice(0, 5000)}` }]
+            max_tokens: 4000,
+            system: "You are a master ERP Data Architect. Return ONLY raw JSON code.",
+            messages: [{
+              role: "user",
+              content: `Identify all key metrics and time-series trends in this data. 
+              Required Format: { 
+                "title": "Business Title", 
+                "kpis": [{"label": "Name", "value": "1.2M", "trend": "up|down", "change": "+5%"}],
+                "charts": [{"type": "area|bar", "title": "Chart Name", "data": [{"name": "Jan", "value": 100}]}]
+              }
+              DATA CONTEXT: ${dataInput.slice(0, 8000)}`
+            }]
           })
         });
 
-        const rawData = await extractRes.json();
-        const contentStr = rawData.content[0].text;
-        const start = contentStr.indexOf('{');
-        const end = contentStr.lastIndexOf('}');
-        const jsonBody = JSON.parse(contentStr.substring(start, end + 1));
+        const d1 = await r1.json();
+        const rawText = d1.content[0].text;
+        const start = rawText.indexOf('{');
+        const end = rawText.lastIndexOf('}');
+        const dataBody = JSON.parse(rawText.substring(start, end + 1));
 
-        // PASS 2: Strategic Narrative
-        setStep('Pass 2: Synthesizing board narrative...');
-        const narrRes = await fetch("https://api.anthropic.com/v1/messages", {
+        // PASS 2: CFO Executive Narrative Synthesis
+        setPipelineStep('Pass 2: Strategic Synthesis...');
+        const r2 = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -248,164 +237,241 @@
           },
           body: JSON.stringify({
             model: "claude-3-5-sonnet-20241022",
-            max_tokens: 1500,
-            messages: [{ role: "user", content: `As a CFO, write a high-level 3-paragraph board summary about these results: ${JSON.stringify(jsonBody)}` }]
+            max_tokens: 2000,
+            messages: [{
+              role: "user",
+              content: `As a CFO, write a high-impact 3-paragraph board report based on these specific findings: ${JSON.stringify(dataBody)}. 
+              Focus on variance, EBITDA impact, and strategic runway.`
+            }]
           })
         });
 
-        const narrData = await narrRes.json();
-        setDashboard({ ...jsonBody, narrative: narrData.content[0].text });
-        setView('dashboard');
+        const d2 = await r2.json();
+        setDashboard({
+          ...dataBody,
+          narrative: d2.content[0].text,
+          stamp: new Date().toLocaleString(),
+          rawSize: dataInput.length
+        });
+        setScreen('dashboard');
       } catch (err) {
-        setError("AI Synthesis failed. Please check your data or API Key.");
+        setError(`Pipeline Failure: ${err.message}`);
       } finally {
-        setLoading(false);
+        setIsAnalyzing(false);
       }
     };
 
-    // ── EXPORT ENGINES ──
-    const exportToPDF = () => {
+    // ── EXPORT ENGINE: PDF ──
+    const doPDF = () => {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
-      doc.setFontSize(22);
+      doc.setFontSize(24);
       doc.setTextColor(0, 212, 255);
-      doc.text(dashboard.title, 15, 20);
+      doc.text(dashboard.title, 15, 25);
       doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(`Generated on ${new Date().toLocaleDateString()}`, 15, 28);
-      
+      doc.setTextColor(150);
+      doc.text(`NEXUS ERP INTELLIGENCE REPORT · ${dashboard.stamp}`, 15, 33);
+
+      doc.autoTable({
+        startY: 45,
+        head: [['Metric', 'Current Status', 'Trend Variance']],
+        body: dashboard.kpis.map(k => [k.label, k.value, k.change]),
+        headStyles: { fillColor: [0, 212, 255] }
+      });
+
       doc.setFontSize(14);
       doc.setTextColor(0);
-      doc.text("Executive Narrative", 15, 45);
+      doc.text("Executive Analysis", 15, doc.lastAutoTable.finalY + 20);
       doc.setFontSize(11);
-      doc.text(dashboard.narrative, 15, 55, { maxWidth: 180 });
-      
-      doc.save(`${dashboard.title.replace(/\s+/g, '_')}.pdf`);
+      const lines = doc.splitTextToSize(dashboard.narrative, 180);
+      doc.text(lines, 15, doc.lastAutoTable.finalY + 30);
+
+      doc.save(`Nexus_Executive_Report_${Date.now()}.pdf`);
     };
 
-    const exportToPPTX = () => {
+    // ── EXPORT ENGINE: PPTX ──
+    const doPPTX = () => {
       let pptx = new PptxGenJS();
-      let slide = pptx.addSlide();
-      slide.background = { color: '060A12' };
-      slide.addText(dashboard.title, { x: 0.5, y: 0.5, fontSize: 32, color: '00D4FF', bold: true });
-      slide.addText(dashboard.narrative, { x: 0.5, y: 1.5, fontSize: 14, color: 'E2EBF6', w: 9 });
-      pptx.writeFile({ fileName: "NEXUS_Board_Report.pptx" });
+      
+      // Slide 1: Cover
+      let s1 = pptx.addSlide();
+      s1.background = { color: '060A12' };
+      s1.addText("NEXUS ERP", { x: 0.5, y: 0.5, fontSize: 44, color: '00D4FF', bold: true });
+      s1.addText(dashboard.title, { x: 0.5, y: 1.5, fontSize: 24, color: 'E2EBF6' });
+      s1.addText(`Board Presentation · Generated ${dashboard.stamp}`, { x: 0.5, y: 6.8, fontSize: 10, color: '4A6585' });
+
+      // Slide 2: Narrative
+      let s2 = pptx.addSlide();
+      s2.background = { color: '060A12' };
+      s2.addText("EXECUTIVE NARRATIVE", { x: 0.5, y: 0.5, fontSize: 20, color: '00D4FF', bold: true });
+      s2.addText(dashboard.narrative, { x: 0.5, y: 1.2, fontSize: 14, color: 'E2EBF6', w: 9, lineSpacing: 24 });
+
+      pptx.writeFile({ fileName: `Nexus_Strategic_Deck.pptx` });
     };
 
     return (
       <div className="app-shell">
-        {loading && (
+        {isAnalyzing && (
           <div className="overlay">
-            <div className="loader"></div>
-            <p style={{marginTop: '20px', fontWeight: 'bold'}}>{step}</p>
+            <div className="loader spin"></div>
+            <h2 style={{marginTop: '25px'}} className="mono">{pipelineStep}</h2>
+            <p className="pulse" style={{color: 'var(--muted)', marginTop: '10px'}}>NEXUS RAG Pipeline is synthesizing context...</p>
           </div>
         )}
 
-        <nav className="top-nav">
-          <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-            <div style={{width: 32, height: 32, background: 'var(--accent)', borderRadius: '6px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#000', fontWeight: 'bold'}}>N</div>
-            <h2 style={{letterSpacing: '-1px'}}>NEXUS <span style={{color: 'var(--accent)'}}>ERP</span></h2>
+        <nav className="top-bar">
+          <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+            <div style={{width: 40, height: 40, background: 'var(--accent)', borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 900, color: '#000', fontSize: 22}}>N</div>
+            <h1 style={{fontSize: 24, letterSpacing: '-1.5px'}}>NEXUS <span style={{color: 'var(--accent)'}}>ERP</span></h1>
           </div>
-          <div style={{display: 'flex', gap: '12px'}}>
+          <div style={{display: 'flex', gap: '15px'}}>
             <input 
               type="password" 
-              placeholder="Anthropic API Key" 
-              className="btn btn-outline" 
-              style={{cursor: 'text', fontSize: '12px', width: '220px'}} 
+              placeholder="API Access Key (Anthropic)" 
+              className="btn btn-s" 
+              style={{cursor: 'text', width: '280px', fontSize: '12px', fontFamily: 'var(--font-mono)'}} 
               value={apiKey} 
               onChange={(e) => setApiKey(e.target.value)} 
             />
-            {view === 'dashboard' && <button className="btn btn-outline" onClick={() => setView('input')}>New Project</button>}
+            {screen === 'dashboard' && <button className="btn btn-s" onClick={() => setScreen('landing')}>New Analysis</button>}
           </div>
         </nav>
 
-        {view === 'input' ? (
-          <div className="animate-up">
-            <div className="card" style={{maxWidth: '800px', margin: '0 auto', textAlign: 'center'}}>
-              <h1 style={{fontSize: '36px', marginBottom: '12px'}}>Intelligence Engine</h1>
-              <p style={{color: 'var(--muted)', marginBottom: '32px'}}>Input your financial data, reports, or CSV logs. Our RAG pipeline identifies KPIs and generates board-level insights.</p>
-              
-              <div style={{marginBottom: '24px'}}>
-                <input type="file" id="fileIn" hidden onChange={handleFile} />
-                <label htmlFor="fileIn" className="btn btn-outline" style={{width: '100%', padding: '40px', borderStyle: 'dashed', justifyContent: 'center'}}>
-                   Click to upload Excel, CSV, or PDF
-                </label>
-                {step && <p style={{fontSize: '12px', marginTop: '10px', color: 'var(--success)'}}>{step}</p>}
+        <main className="main-content">
+          {screen === 'landing' ? (
+            <div className="animate-up">
+              <div style={{textAlign: 'center', marginBottom: '60px'}}>
+                <h2 style={{fontSize: '52px', marginBottom: '15px'}}>Deep Intelligence <span style={{color: 'var(--accent)'}}>Engine.</span></h2>
+                <p style={{color: 'var(--muted)', fontSize: '18px', maxWidth: '800px', margin: '0 auto'}}>
+                  Leverage the power of Claude 3.5 Sonnet to transform unorganized PDFs and massive spreadsheets into interactive board-ready insights in seconds.
+                </p>
               </div>
 
-              <textarea 
-                className="input-field" 
-                placeholder="Or paste raw text/numbers here..." 
-                value={dataContent}
-                onChange={(e) => setDataContent(e.target.value)}
-              />
-
-              {error && <p style={{color: 'var(--danger)', margin: '16px 0'}}>{error}</p>}
-
-              <button className="btn btn-primary" style={{width: '100%', marginTop: '24px', padding: '16px'}} onClick={generateIntelligence}>
-                ⚡ ANALYZE DATA & GENERATE DASHBOARD
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="animate-up">
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '30px'}}>
-              <div>
-                <span className="badge">AI ANALYSIS COMPLETE</span>
-                <h1 style={{fontSize: '32px'}}>{dashboard.title}</h1>
-              </div>
-              <div style={{display: 'flex', gap: '12px'}}>
-                <button className="btn btn-outline" onClick={exportToPDF}>Download PDF</button>
-                <button className="btn btn-outline" onClick={exportToPPTX}>Export PPTX</button>
-              </div>
-            </div>
-
-            <div className="kpi-grid">
-              {dashboard.kpis.map((k, i) => (
-                <div key={i} className="card kpi-tile" style={{borderLeftColor: i % 2 === 0 ? 'var(--accent)' : 'var(--accent2)'}}>
-                  <div className="kpi-label">{k.label}</div>
-                  <div className="kpi-value">{k.value}</div>
-                  <div style={{fontSize: '13px', fontWeight: 'bold', color: k.trend === 'up' ? 'var(--success)' : 'var(--danger)', marginTop: '4px'}}>
-                    {k.trend === 'up' ? '▲' : '▼'} {k.change}
+              <div style={{display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '30px'}}>
+                <div>
+                  <div className="card" style={{borderStyle: 'dashed', textAlign: 'center', padding: '60px'}} onClick={() => fileRef.current.click()}>
+                    <input type="file" ref={fileRef} hidden onChange={onFileDrop} accept=".pdf, .xlsx, .csv" />
+                    <div style={{fontSize: '48px', marginBottom: '20px'}}>📁</div>
+                    <h3>Ingest Source Data</h3>
+                    <p style={{color: 'var(--muted)', marginTop: '10px'}}>Drag & Drop PDF or Excel here</p>
+                    {dataInput && <div style={{marginTop: '20px', color: 'var(--accent3)', fontWeight: 800}}>✓ CONTEXT INGESTED ({Math.round(dataInput.length/1024)}KB)</div>}
+                  </div>
+                  
+                  <div style={{marginTop: '30px'}}>
+                    <div className="kpi-label">Manual Context Override</div>
+                    <textarea 
+                      className="input-area" 
+                      placeholder="Paste raw data or supplemental context here..." 
+                      value={dataInput}
+                      onChange={(e) => setDataInput(e.target.value)}
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
 
-            <div style={{display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px'}}>
-              <div className="card">
-                <h3 style={{marginBottom: '20px'}}>Trend Analysis</h3>
-                <div style={{height: '350px'}}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={dashboard.charts[0].data}>
-                      <defs>
-                        <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="var(--accent)" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1A2B40" vertical={false} />
-                      <XAxis dataKey="name" stroke="var(--muted)" fontSize={11} tickLine={false} axisLine={false} />
-                      <YAxis stroke="var(--muted)" fontSize={11} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={{background: '#0C1422', border: '1px solid #1A2B40', borderRadius: '8px'}} />
-                      <Area type="monotone" dataKey="value" stroke="var(--accent)" fillOpacity={1} fill="url(#colorVal)" strokeWidth={3} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              <div className="card">
-                <h3 style={{marginBottom: '20px'}}>CFO Executive Narrative</h3>
-                <div style={{padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', color: '#A0AFC0', fontSize: '15px', lineHeight: '1.8', whiteSpace: 'pre-wrap'}}>
-                  {dashboard.narrative}
+                <div className="card">
+                  <div className="badge" style={{marginBottom: '15px'}}>Intelligence Config</div>
+                  <h3 style={{marginBottom: '15px'}}>Pipeline Ready</h3>
+                  <p style={{color: '#8BA5C0', fontSize: '14px', lineHeight: '1.8'}}>
+                    The NEXUS RAG model will perform a dual-pass synthesis:
+                    <br/><br/>
+                    <b>Pass 1: Structuring</b> - Mapping raw strings to financial KPI schemas.
+                    <br/><br/>
+                    <b>Pass 2: Analysis</b> - Interpreting variance and runway impacts for a CFO-level narrative.
+                  </p>
+
+                  {error && <div style={{marginTop: '20px', padding: '15px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--danger)', borderRadius: '10px', color: 'var(--danger)', fontSize: '13px'}}>{error}</div>}
+
+                  <button 
+                    className="btn btn-p" 
+                    style={{width: '100%', marginTop: '30px', padding: '18px'}} 
+                    disabled={!dataInput}
+                    onClick={executeIntelligence}>
+                    ⚡ INITIATE DUAL-PASS ANALYSIS
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="animate-up">
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px'}}>
+                <div>
+                  <div className="badge" style={{marginBottom: '10px'}}>RAG Analysis Complete</div>
+                  <h1 style={{fontSize: '42px'}}>{dashboard.title}</h1>
+                  <p style={{color: 'var(--muted)', marginTop: '5px'}}>Ingested {Math.round(dashboard.rawSize/1024)}KB · Verified {dashboard.stamp}</p>
+                </div>
+                <div style={{display: 'flex', gap: '15px'}}>
+                  <button className="btn btn-s" onClick={doPDF}>Export PDF Report</button>
+                  <button className="btn btn-s" onClick={doPPTX}>Board Deck (.pptx)</button>
+                </div>
+              </div>
+
+              <div className="tab-nav">
+                <div className={`tab ${activeTab === 'intelligence' ? 'active' : ''}`} onClick={() => setActiveTab('intelligence')}>Intelligence Overview</div>
+                <div className={`tab ${activeTab === 'analysis' ? 'active' : ''}`} onClick={() => setActiveTab('analysis')}>Deep Strategic Narrative</div>
+              </div>
+
+              {activeTab === 'intelligence' ? (
+                <>
+                  <div className="kpi-grid">
+                    {dashboard.kpis.map((k, i) => (
+                      <div key={i} className="kpi-tile">
+                        <div className="kpi-label">{k.label}</div>
+                        <div className="kpi-value">{k.value}</div>
+                        <div className={`kpi-change ${k.trend === 'up' ? 'up' : 'down'}`}>
+                          {k.trend === 'up' ? '▲' : '▼'} {k.change}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="viz-panel">
+                    <div className="card chart-box">
+                      <div className="kpi-label">{dashboard.charts[0].title}</div>
+                      <div style={{height: '350px', marginTop: '20px'}}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={dashboard.charts[0].data}>
+                            <defs>
+                              <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.4}/>
+                                <stop offset="95%" stopColor="var(--accent)" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1A2B40" vertical={false} />
+                            <XAxis dataKey="name" stroke="var(--muted)" fontSize={11} tickLine={false} axisLine={false} />
+                            <YAxis stroke="var(--muted)" fontSize={11} tickLine={false} axisLine={false} />
+                            <Tooltip contentStyle={{background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px'}} />
+                            <Area type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={3} fillOpacity={1} fill="url(#glow)" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                    
+                    <div className="card">
+                      <div className="kpi-label">Strategic Overview</div>
+                      <div className="narrative-box" style={{fontSize: '14px', padding: '20px'}}>
+                        {dashboard.narrative.split('\n')[0]}
+                        <br/><br/>
+                        <button className="btn btn-s" style={{width: '100%'}} onClick={() => setActiveTab('analysis')}>Read Full CFO Report</button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="card animate-up">
+                  <div className="badge" style={{marginBottom: '20px'}}>Strategic Memo</div>
+                  <div className="narrative-box">
+                    {dashboard.narrative}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </main>
       </div>
     );
   }
 
+  // ── MOUNT APP ──
   const root = ReactDOM.createRoot(document.getElementById("root"));
   root.render(<App />);
 </script>
