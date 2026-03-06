@@ -1,0 +1,1132 @@
+import { useState, useCallback, useRef } from "react";
+import * as XLSX from "xlsx";
+import {
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  Legend, ResponsiveContainer, RadarChart, Radar,
+  PolarGrid, PolarAngleAxis, PolarRadiusAxis
+} from "recharts";
+
+// ─── LOAD EXTERNAL LIBS DYNAMICALLY ──────────────────────────────────────────
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) return res();
+    const s = document.createElement("script");
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+// ─── THEME ────────────────────────────────────────────────────────────────────
+const T = {
+  bg: "#07090F", surface: "#0C1120", card: "#0F1825", border: "#192840",
+  accent: "#00C2FF", accent2: "#8B5CF6", accent3: "#10B981",
+  warn: "#F97316", danger: "#EF4444",
+  text: "#E2EBF6", muted: "#4A6585",
+  colors: ["#00C2FF","#8B5CF6","#10B981","#F97316","#F59E0B","#EF4444","#06D6A0","#3B82F6","#EC4899","#14B8A6"],
+};
+
+const STYLE = `
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:${T.bg};font-family:'Plus Jakarta Sans',sans-serif;color:${T.text};overflow-x:hidden}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:${T.bg}}
+::-webkit-scrollbar-thumb{background:${T.border};border-radius:4px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.au{animation:fadeUp .4s ease both}
+.au1{animation-delay:.07s}.au2{animation-delay:.14s}.au3{animation-delay:.21s}.au4{animation-delay:.28s}
+.spin{animation:spin .9s linear infinite}
+.card{background:${T.card};border:1px solid ${T.border};border-radius:13px}
+.glass{background:rgba(255,255,255,.025);border:1px solid ${T.border};border-radius:11px;backdrop-filter:blur(14px)}
+.mono{font-family:'IBM Plex Mono',monospace}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:100px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+input,textarea,button{font-family:inherit}
+`;
+
+// ─── DEPARTMENTS ──────────────────────────────────────────────────────────────
+const DEPTS = [
+  {id:"sales",label:"Sales",icon:"📈",color:"#00C2FF"},
+  {id:"hr",label:"HR & People",icon:"👥",color:"#8B5CF6"},
+  {id:"operations",label:"Operations",icon:"⚙️",color:"#10B981"},
+  {id:"finance",label:"Finance",icon:"💰",color:"#F59E0B"},
+  {id:"marketing",label:"Marketing",icon:"📣",color:"#F97316"},
+  {id:"supply",label:"Supply Chain",icon:"🚚",color:"#06D6A0"},
+  {id:"it",label:"IT & Tech",icon:"💻",color:"#EF4444"},
+  {id:"executive",label:"Executive",icon:"🏢",color:"#3B82F6"},
+];
+
+// ─── EXCEL / CSV PARSER (SheetJS) ─────────────────────────────────────────────
+function parseExcelFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: "array", cellDates: true, raw: false });
+        const sheets = {};
+        let totalRows = 0;
+        wb.SheetNames.forEach(name => {
+          const ws = wb.Sheets[name];
+          const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", blankrows: false });
+          const json = XLSX.utils.sheet_to_json(ws, { defval: "" });
+          sheets[name] = { raw, json, rowCount: raw.length };
+          totalRows += raw.length;
+        });
+        resolve({ sheets, sheetNames: wb.SheetNames, totalRows, fileName: file.name });
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function sheetToText(sheetData, maxRows = 35) {
+  const { raw } = sheetData;
+  let out = "";
+  const preview = raw.slice(0, maxRows);
+  preview.forEach((row, i) => {
+    const line = row.filter(c => c !== "" && c !== null && c !== undefined).join(" | ");
+    if (line.trim()) out += `Row${i + 1}: ${line}\n`;
+  });
+  if (raw.length > maxRows) out += `... (${raw.length - maxRows} more rows)\n`;
+  return out;
+}
+
+// ─── CLAUDE API ───────────────────────────────────────────────────────────────
+async function callClaude(system, user, maxTokens = 4500) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: maxTokens,
+      system,
+      messages: [{ role: "user", content: user }],
+    }),
+  });
+  const d = await res.json();
+  if (d.error) throw new Error(d.error.message);
+  return d.content?.[0]?.text ?? "";
+}
+
+// ─── EXPORT: EXCEL ────────────────────────────────────────────────────────────
+function exportToExcel(dashboard, parsedFile) {
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Executive Summary
+  const summaryAOA = [
+    ["NEXUS ERP — AI Dashboard Report", "", ""],
+    ["Department", dashboard.department?.toUpperCase() ?? "", ""],
+    ["Title", dashboard.title ?? "", ""],
+    ["Period", dashboard.period ?? "", ""],
+    ["Generated", dashboard.generatedAt ?? "", ""],
+    ["", "", ""],
+    ["EXECUTIVE SUMMARY", "", ""],
+    [dashboard.executiveSummary ?? "", "", ""],
+    ["", "", ""],
+    ["CFO NARRATIVE", "", ""],
+    [dashboard.narrative ?? "", "", ""],
+  ];
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryAOA);
+  wsSummary["!cols"] = [{ wch: 22 }, { wch: 90 }];
+  XLSX.utils.book_append_sheet(wb, wsSummary, "Executive Summary");
+
+  // Sheet 2: KPI Dashboard
+  const kpiHeader = ["#", "Metric", "Value", "Unit", "Trend", "Change"];
+  const kpiRows = (dashboard.kpis ?? []).map((k, i) => [i + 1, k.label, k.value, k.unit, k.trend, k.change]);
+  const wsKPI = XLSX.utils.aoa_to_sheet([kpiHeader, ...kpiRows]);
+  wsKPI["!cols"] = [{ wch: 4 }, { wch: 30 }, { wch: 16 }, { wch: 12 }, { wch: 10 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, wsKPI, "KPI Dashboard");
+
+  // Sheet 3: Chart Data
+  const chartRows = [["Chart Title", "Category / Label", "Primary Value", "Secondary Value"]];
+  (dashboard.charts ?? []).forEach(c => {
+    (c.data ?? []).forEach(d => chartRows.push([c.title, d.name, d.value, d.secondary ?? ""]));
+    chartRows.push(["", "", "", ""]);
+  });
+  const wsCharts = XLSX.utils.aoa_to_sheet(chartRows);
+  wsCharts["!cols"] = [{ wch: 32 }, { wch: 24 }, { wch: 18 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, wsCharts, "Chart Data");
+
+  // Sheet 4: Insights
+  const insightRows = [
+    ["TYPE", "INSIGHT TEXT"],
+    ...(dashboard.insights ?? []).map(i => [i.type?.toUpperCase(), `${i.icon ?? ""} ${i.text}`]),
+    ["", ""],
+    ["RECOMMENDATIONS", ""],
+    ...(dashboard.recommendations ?? []).map((r, i) => [`#${i + 1}`, r]),
+  ];
+  const wsInsights = XLSX.utils.aoa_to_sheet(insightRows);
+  wsInsights["!cols"] = [{ wch: 18 }, { wch: 90 }];
+  XLSX.utils.book_append_sheet(wb, wsInsights, "Insights & Actions");
+
+  // Sheet 5+: Original source sheets
+  if (parsedFile) {
+    Object.entries(parsedFile.sheets).slice(0, 4).forEach(([name, sheet]) => {
+      if (sheet.raw?.length > 0) {
+        const wsSource = XLSX.utils.aoa_to_sheet(sheet.raw);
+        XLSX.utils.book_append_sheet(wb, wsSource, `Src: ${name}`.slice(0, 31));
+      }
+    });
+  }
+
+  XLSX.writeFile(wb, `nexus-${dashboard.department}-report-${Date.now()}.xlsx`);
+}
+
+// ─── EXPORT: PDF (print window) ───────────────────────────────────────────────
+function exportToPDF(dashboard) {
+  const dept = DEPTS.find(d => d.id === dashboard.department) ?? DEPTS[0];
+
+  const kpiCards = (dashboard.kpis ?? []).map((k, i) => `
+    <div style="display:inline-block;vertical-align:top;width:calc(25% - 10px);margin:5px;background:#f8faff;
+      border-radius:10px;padding:14px 12px;border-top:3px solid ${T.colors[i % 10]}">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;margin-bottom:5px">${k.label}</div>
+      <div style="font-size:24px;font-weight:800;color:#111827">${k.value}
+        <span style="font-size:12px;font-weight:500;color:#9ca3af">${k.unit && k.unit !== "units" ? " " + k.unit : ""}</span>
+      </div>
+      <div style="font-size:11px;margin-top:3px;font-weight:700;color:${k.trend === "up" ? "#10b981" : k.trend === "down" ? "#ef4444" : "#6b7280"}">
+        ${k.trend === "up" ? "▲" : k.trend === "down" ? "▼" : "→"} ${k.change}
+      </div>
+    </div>`).join("");
+
+  const insightsHtml = (dashboard.insights ?? []).map(ins => `
+    <div style="padding:9px 13px;margin:5px 0;border-left:3px solid ${
+      ins.type === "positive" ? "#10b981" : ins.type === "negative" ? "#ef4444" : ins.type === "alert" ? "#f97316" : "#3b82f6"
+    };background:#f9fafb;border-radius:0 7px 7px 0;font-size:12px;line-height:1.6">
+      <span style="font-weight:700;text-transform:uppercase;font-size:9px;color:${
+        ins.type === "positive" ? "#10b981" : ins.type === "negative" ? "#ef4444" : ins.type === "alert" ? "#f97316" : "#3b82f6"
+      }">${ins.type}</span>
+      <p style="margin:2px 0 0;color:#374151">${ins.icon ?? "📊"} ${ins.text}</p>
+    </div>`).join("");
+
+  const recsHtml = (dashboard.recommendations ?? []).map((r, i) => `
+    <div style="display:flex;gap:9px;padding:9px 11px;margin:5px 0;background:#f0fdf4;border-radius:7px;font-size:12px;line-height:1.6">
+      <span style="background:#10b981;color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;flex-shrink:0">${i + 1}</span>
+      <span style="color:#374151">${r}</span>
+    </div>`).join("");
+
+  const chartTablesHtml = (dashboard.charts ?? []).map(c => `
+    <div style="break-inside:avoid;margin-bottom:14px">
+      <div style="font-weight:700;font-size:13px;color:#111827;margin-bottom:6px;border-bottom:1px solid #e5e7eb;padding-bottom:4px">${c.title}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr style="background:#f3f4f6">
+          <th style="text-align:left;padding:5px 8px;border:1px solid #e5e7eb">Category</th>
+          <th style="text-align:right;padding:5px 8px;border:1px solid #e5e7eb">Value</th>
+          ${c.data?.some(d => d.secondary) ? '<th style="text-align:right;padding:5px 8px;border:1px solid #e5e7eb">Secondary</th>' : ""}
+        </tr></thead>
+        <tbody>${(c.data ?? []).map((d, j) => `
+          <tr style="background:${j % 2 === 0 ? "#fff" : "#f9fafb"}">
+            <td style="padding:4px 8px;border:1px solid #e5e7eb">${d.name}</td>
+            <td style="text-align:right;padding:4px 8px;border:1px solid #e5e7eb;font-weight:600;font-family:monospace">${d.value}</td>
+            ${d.secondary !== null && d.secondary !== undefined ? `<td style="text-align:right;padding:4px 8px;border:1px solid #e5e7eb;font-family:monospace">${d.secondary}</td>` : ""}
+          </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`).join("");
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"/>
+<title>${dashboard.title} — NEXUS ERP</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+  *{box-sizing:border-box} body{font-family:'Plus Jakarta Sans',Arial,sans-serif;margin:0;padding:0;color:#111827;background:#fff;font-size:13px}
+  .wrap{max-width:1050px;margin:0 auto;padding:36px 44px}
+  h2{font-size:16px;font-weight:700;color:#1d4ed8;margin:22px 0 10px;border-bottom:1.5px solid #dbeafe;padding-bottom:5px}
+  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.noprint{display:none}@page{margin:1.2cm;size:A4}}
+</style>
+</head><body>
+<div class="wrap">
+  <!-- Header -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;padding-bottom:18px;border-bottom:3px solid #1d4ed8">
+    <div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;margin-bottom:3px">
+        ${dept.icon} ${dept.label?.toUpperCase()} DEPARTMENT
+      </div>
+      <h1 style="margin:0;font-size:24px;font-weight:800;color:#111827">${dashboard.title}</h1>
+      <div style="color:#6b7280;font-size:12px;margin-top:5px">Period: ${dashboard.period} · ${dashboard.generatedAt}</div>
+    </div>
+    <div style="text-align:center;background:#1d4ed8;color:white;padding:12px 18px;border-radius:9px;flex-shrink:0">
+      <div style="font-size:9px;letter-spacing:.08em;opacity:.8">NEXUS ERP</div>
+      <div style="font-size:15px;font-weight:800">AI REPORT</div>
+      <div style="font-size:9px;opacity:.7;margin-top:1px">BOARD CONFIDENTIAL</div>
+    </div>
+  </div>
+
+  <!-- Executive Summary -->
+  <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:15px 18px;margin-bottom:20px;font-size:13px;line-height:1.8;color:#1e3a5f">
+    <strong>Executive Summary:</strong> ${dashboard.executiveSummary}
+  </div>
+
+  <h2>📊 Key Performance Indicators</h2>
+  <div>${kpiCards}</div>
+  <div style="clear:both;margin-top:8px"></div>
+
+  <h2>💡 AI-Detected Insights</h2>
+  ${insightsHtml}
+
+  <h2>🎯 Strategic Recommendations</h2>
+  ${recsHtml}
+
+  <h2>📈 Chart Data Tables</h2>
+  <div style="columns:2;gap:20px;column-fill:balance">${chartTablesHtml}</div>
+
+  <h2>📝 CFO Board Narrative</h2>
+  <p style="line-height:1.9;color:#374151;background:#f9fafb;padding:14px;border-radius:8px;font-size:13px">${dashboard.narrative}</p>
+
+  <div style="margin-top:36px;padding-top:14px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;display:flex;justify-content:space-between">
+    <span>NEXUS ERP · AI Dashboard Intelligence · RAG Model</span>
+    <span>Confidential · Board of Directors · ${dashboard.generatedAt}</span>
+  </div>
+</div>
+
+<div class="noprint" style="text-align:center;padding:18px;background:#f3f4f6;border-top:1px solid #e5e7eb;position:sticky;bottom:0">
+  <button onclick="window.print()" style="padding:11px 28px;background:#1d4ed8;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-right:10px;font-family:inherit">
+    🖨️ Save as PDF / Print
+  </button>
+  <button onclick="window.close()" style="padding:11px 20px;background:#e5e7eb;color:#374151;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit">
+    ✕ Close
+  </button>
+</div>
+</body></html>`;
+
+  const w = window.open("", "_blank", "width=1100,height=800");
+  if (w) { w.document.write(html); w.document.close(); }
+  else alert("Pop-up blocked. Please allow pop-ups and try again.");
+}
+
+// ─── EXPORT: PPTX ─────────────────────────────────────────────────────────────
+async function exportToPPTX(dashboard) {
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundled.js");
+  const PptxGenJS = window.PptxGenJS;
+  const pptx = new PptxGenJS();
+  pptx.layout = "LAYOUT_WIDE"; // 13.33 x 7.5 inches
+  pptx.title = dashboard.title;
+
+  const dept = DEPTS.find(d => d.id === dashboard.department) ?? DEPTS[0];
+  const DARK = "07090F"; const CARD = "0F1825"; const BORDER = "192840";
+  const ACCENT = "00C2FF"; const PURPLE = "8B5CF6"; const GREEN = "10B981";
+  const MUTED = "4A6585"; const WHITE = "E2EBF6"; const WARN = "F97316";
+  const cc = ["00C2FF","8B5CF6","10B981","F97316","F59E0B","EF4444","06D6A0","3B82F6","EC4899","14B8A6"];
+
+  // ── SLIDE 1: Title ──────────────────────────────────────────────────────────
+  const s1 = pptx.addSlide();
+  s1.background = { color: DARK };
+  s1.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: "100%", h: "100%", fill: { color: CARD }, line: { color: CARD } });
+  s1.addShape(pptx.ShapeType.rect, { x: 0, y: 3.6, w: 13.33, h: 0.06, fill: { color: ACCENT }, line: { color: ACCENT } });
+  s1.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 0.14, h: 7.5, fill: { color: ACCENT }, line: { color: ACCENT } });
+  s1.addText("NEXUS ERP  ·  AI DASHBOARD INTELLIGENCE", { x: 0.4, y: 0.3, w: 10, fontSize: 10, bold: true, color: ACCENT, charSpacing: 5 });
+  s1.addText(`${dept.icon}  ${dept.label?.toUpperCase()} DEPARTMENT`, { x: 0.4, y: 0.7, w: 9, fontSize: 10, bold: true, color: MUTED, charSpacing: 3 });
+  s1.addText(dashboard.title, { x: 0.4, y: 1.15, w: 11.2, fontSize: 32, bold: true, color: WHITE });
+  s1.addText(`Period: ${dashboard.period}  ·  Generated: ${dashboard.generatedAt}`, { x: 0.4, y: 3.2, w: 9, fontSize: 11, color: MUTED });
+  s1.addShape(pptx.ShapeType.rect, { x: 10.0, y: 0.3, w: 2.9, h: 0.78, fill: { color: "0D2144" }, line: { color: ACCENT, width: 1 }, rounding: true });
+  s1.addText("AI REPORT", { x: 10.0, y: 0.42, w: 2.9, fontSize: 14, bold: true, color: WHITE, align: "center" });
+  s1.addText(dashboard.summary ?? "", { x: 0.4, y: 4.1, w: 12.5, fontSize: 13, color: "8BA5C0", lineSpacingMultiple: 1.45 });
+  s1.addText("CONFIDENTIAL · BOARD OF DIRECTORS", { x: 0.4, y: 6.95, w: 12.5, fontSize: 8, color: "2A3A50", align: "center", charSpacing: 4 });
+
+  // ── SLIDE 2: KPI Overview ───────────────────────────────────────────────────
+  const s2 = pptx.addSlide();
+  s2.background = { color: DARK };
+  s2.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 1.05, fill: { color: CARD }, line: { color: CARD } });
+  s2.addText("KEY PERFORMANCE INDICATORS", { x: 0.45, y: 0.15, w: 12, fontSize: 10, bold: true, color: ACCENT, charSpacing: 5 });
+  s2.addText(dashboard.title, { x: 0.45, y: 0.45, w: 12, fontSize: 17, bold: true, color: WHITE });
+
+  const kpis = (dashboard.kpis ?? []).slice(0, 8);
+  const perRow = 4;
+  kpis.forEach((kpi, i) => {
+    const col = i % perRow; const row = Math.floor(i / perRow);
+    const x = 0.3 + col * 3.15; const y = 1.2 + row * 1.55;
+    const cw = 2.95; const ch = 1.38;
+    s2.addShape(pptx.ShapeType.rect, { x, y, w: cw, h: ch, fill: { color: CARD }, line: { color: BORDER, width: 0.8 }, rounding: true });
+    s2.addShape(pptx.ShapeType.rect, { x, y, w: cw, h: 0.055, fill: { color: cc[i % 10] }, line: { color: cc[i % 10] }, rounding: true });
+    s2.addText(kpi.label?.toUpperCase() ?? "", { x: x + 0.14, y: y + 0.13, w: cw - 0.28, fontSize: 7.5, bold: true, color: MUTED, charSpacing: 1.5 });
+    const valStr = `${kpi.value}${kpi.unit && kpi.unit !== "units" ? " " + kpi.unit : ""}`;
+    s2.addText(valStr, { x: x + 0.12, y: y + 0.34, w: cw - 0.24, fontSize: 21, bold: true, color: WHITE });
+    const trendColor = kpi.trend === "up" ? GREEN : kpi.trend === "down" ? "EF4444" : MUTED;
+    const trendArrow = kpi.trend === "up" ? "▲" : kpi.trend === "down" ? "▼" : "→";
+    s2.addText(`${trendArrow}  ${kpi.change ?? ""}`, { x: x + 0.12, y: y + 1.05, w: cw - 0.24, fontSize: 11, bold: true, color: trendColor });
+  });
+
+  // ── SLIDE 3: Chart Data Tables (2-up) ───────────────────────────────────────
+  const s3 = pptx.addSlide();
+  s3.background = { color: DARK };
+  s3.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 1.05, fill: { color: CARD }, line: { color: CARD } });
+  s3.addText("ANALYTICS & CHART DATA", { x: 0.45, y: 0.15, w: 12, fontSize: 10, bold: true, color: PURPLE, charSpacing: 5 });
+  s3.addText("Performance Metrics Breakdown", { x: 0.45, y: 0.45, w: 12, fontSize: 17, bold: true, color: WHITE });
+
+  const charts = (dashboard.charts ?? []).slice(0, 4);
+  const chartPositions = [
+    { x: 0.3, y: 1.15 }, { x: 6.85, y: 1.15 },
+    { x: 0.3, y: 4.1 }, { x: 6.85, y: 4.1 },
+  ];
+  charts.forEach((chart, ci) => {
+    const pos = chartPositions[ci] ?? { x: 0.3, y: 1.15 };
+    const cw = 6.2; const ch = 2.75;
+    s3.addShape(pptx.ShapeType.rect, { x: pos.x, y: pos.y, w: cw, h: ch, fill: { color: CARD }, line: { color: BORDER, width: 0.8 }, rounding: true });
+    s3.addText(chart.title ?? "", { x: pos.x + 0.18, y: pos.y + 0.13, w: cw - 0.36, fontSize: 11, bold: true, color: WHITE });
+    s3.addText(chart.subtitle ?? "", { x: pos.x + 0.18, y: pos.y + 0.38, w: cw - 0.36, fontSize: 8.5, color: MUTED });
+    const hasSecondary = (chart.data ?? []).some(d => d.secondary != null);
+    const headerRow = [
+      { text: "Category", options: { fontSize: 8, bold: true, color: ACCENT, fill: { color: "0D1828" }, border: { pt: 0.5, color: BORDER } } },
+      { text: "Value", options: { fontSize: 8, bold: true, color: ACCENT, fill: { color: "0D1828" }, align: "right", border: { pt: 0.5, color: BORDER } } },
+      ...(hasSecondary ? [{ text: "2nd", options: { fontSize: 8, bold: true, color: ACCENT, fill: { color: "0D1828" }, align: "right", border: { pt: 0.5, color: BORDER } } }] : []),
+    ];
+    const dataRows = (chart.data ?? []).slice(0, 7).map((d, ri) => [
+      { text: String(d.name ?? ""), options: { fontSize: 8, color: "8BA5C0", fill: { color: ri % 2 === 0 ? CARD : "0D1828" }, border: { pt: 0.5, color: BORDER } } },
+      { text: String(d.value ?? ""), options: { fontSize: 8.5, bold: true, color: WHITE, align: "right", fill: { color: ri % 2 === 0 ? CARD : "0D1828" }, border: { pt: 0.5, color: BORDER } } },
+      ...(hasSecondary ? [{ text: d.secondary != null ? String(d.secondary) : "", options: { fontSize: 8, color: MUTED, align: "right", fill: { color: ri % 2 === 0 ? CARD : "0D1828" }, border: { pt: 0.5, color: BORDER } } }] : []),
+    ]);
+    if (dataRows.length) {
+      s3.addTable([headerRow, ...dataRows], {
+        x: pos.x + 0.18, y: pos.y + 0.64,
+        w: cw - 0.36, rowH: 0.26, border: { pt: 0.5, color: BORDER },
+      });
+    }
+  });
+
+  // ── SLIDE 4: Insights ───────────────────────────────────────────────────────
+  const s4 = pptx.addSlide();
+  s4.background = { color: DARK };
+  s4.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 1.05, fill: { color: CARD }, line: { color: CARD } });
+  s4.addText("AI-DETECTED INSIGHTS", { x: 0.45, y: 0.15, w: 12, fontSize: 10, bold: true, color: GREEN, charSpacing: 5 });
+  s4.addText("Patterns, Anomalies & Opportunities", { x: 0.45, y: 0.45, w: 12, fontSize: 17, bold: true, color: WHITE });
+
+  const insights = (dashboard.insights ?? []).slice(0, 6);
+  const iPos = [
+    { x: 0.3, y: 1.15 }, { x: 6.85, y: 1.15 },
+    { x: 0.3, y: 2.7 }, { x: 6.85, y: 2.7 },
+    { x: 0.3, y: 4.25 }, { x: 6.85, y: 4.25 },
+  ];
+  insights.forEach((ins, i) => {
+    const pos = iPos[i] ?? { x: 0.3, y: 1.15 };
+    const bColor = ins.type === "positive" ? GREEN : ins.type === "negative" ? "EF4444" : ins.type === "alert" ? WARN : ACCENT;
+    s4.addShape(pptx.ShapeType.rect, { x: pos.x, y: pos.y, w: 6.2, h: 1.3, fill: { color: "0E1C2F" }, line: { color: bColor, width: 1.5 }, rounding: true });
+    s4.addShape(pptx.ShapeType.rect, { x: pos.x, y: pos.y, w: 0.07, h: 1.3, fill: { color: bColor }, line: { color: bColor }, rounding: true });
+    s4.addText((ins.type ?? "info").toUpperCase(), { x: pos.x + 0.22, y: pos.y + 0.1, w: 1.8, fontSize: 8, bold: true, color: bColor, charSpacing: 2 });
+    s4.addText(`${ins.icon ?? "📊"} ${ins.text ?? ""}`, { x: pos.x + 0.2, y: pos.y + 0.35, w: 5.85, fontSize: 10.5, color: "C0D0E0", lineSpacingMultiple: 1.35 });
+  });
+
+  // ── SLIDE 5: Recommendations ────────────────────────────────────────────────
+  const s5 = pptx.addSlide();
+  s5.background = { color: DARK };
+  s5.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 1.05, fill: { color: CARD }, line: { color: CARD } });
+  s5.addText("STRATEGIC RECOMMENDATIONS", { x: 0.45, y: 0.15, w: 12, fontSize: 10, bold: true, color: "F59E0B", charSpacing: 5 });
+  s5.addText("Board-Level Action Items", { x: 0.45, y: 0.45, w: 12, fontSize: 17, bold: true, color: WHITE });
+
+  (dashboard.recommendations ?? []).slice(0, 5).forEach((rec, i) => {
+    const y = 1.18 + i * 1.14;
+    s5.addShape(pptx.ShapeType.rect, { x: 0.3, y, w: 12.73, h: 1.0, fill: { color: CARD }, line: { color: BORDER, width: 0.8 }, rounding: true });
+    s5.addShape(pptx.ShapeType.ellipse, { x: 0.42, y: y + 0.22, w: 0.56, h: 0.56, fill: { color: "0D2144" }, line: { color: ACCENT, width: 1.5 } });
+    s5.addText(String(i + 1), { x: 0.42, y: y + 0.24, w: 0.56, fontSize: 14, bold: true, color: ACCENT, align: "center" });
+    s5.addText(rec, { x: 1.15, y: y + 0.18, w: 11.68, fontSize: 12, color: "C0D0E0", lineSpacingMultiple: 1.35 });
+  });
+
+  // ── SLIDE 6: Closing ────────────────────────────────────────────────────────
+  const s6 = pptx.addSlide();
+  s6.background = { color: "06080F" };
+  s6.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 3.75, fill: { color: "0C1120" }, line: { color: "0C1120" } });
+  s6.addShape(pptx.ShapeType.rect, { x: 0, y: 3.75, w: 13.33, h: 0.055, fill: { color: ACCENT }, line: { color: ACCENT } });
+  s6.addText("CFO EXECUTIVE NARRATIVE", { x: 0.5, y: 0.3, w: 12, fontSize: 10, bold: true, color: ACCENT, charSpacing: 6 });
+  s6.addText(dashboard.executiveSummary ?? "", { x: 0.5, y: 0.7, w: 12.33, fontSize: 13, color: WHITE, lineSpacingMultiple: 1.6 });
+  const dq = dashboard.dataQuality ?? {};
+  s6.addText("DATA QUALITY", { x: 0.5, y: 4.0, w: 4, fontSize: 9, bold: true, color: MUTED, charSpacing: 3 });
+  s6.addText(`Score: ${dq.score ?? "N/A"}%  ·  Completeness: ${dq.completeness ?? "N/A"}  ·  Source rows processed: ${dashboard._totalRows ?? "N/A"}`, { x: 0.5, y: 4.3, w: 12, fontSize: 11, color: GREEN });
+  s6.addText("NEXUS ERP · AI Dashboard Intelligence · CONFIDENTIAL", { x: 0.5, y: 7.1, w: 12.33, fontSize: 8.5, color: "2A3A50", align: "center" });
+
+  await pptx.writeFile({ fileName: `nexus-${dashboard.department}-presentation-${Date.now()}.pptx` });
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+export default function App() {
+  const [screen, setScreen] = useState("input");
+  const [parsedFile, setParsedFile] = useState(null);
+  const [rawText, setRawText] = useState("");
+  const [dept, setDept] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [stepMsg, setStepMsg] = useState("");
+  const [pct, setPct] = useState(0);
+  const [dashboard, setDashboard] = useState(null);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [error, setError] = useState(null);
+  const [exporting, setExporting] = useState(null);
+  const fileRef = useRef();
+
+  const handleFile = useCallback(async (file) => {
+    if (!file) return;
+    setError(null);
+    try {
+      const parsed = await parseExcelFile(file);
+      setParsedFile(parsed);
+      // Show raw text preview
+      const preview = Object.entries(parsed.sheets)
+        .map(([n, s]) => `=== Sheet: ${n} (${s.rowCount} rows) ===\n${sheetToText(s, 12)}`)
+        .join("\n\n");
+      setRawText(preview.slice(0, 3000));
+    } catch {
+      setError("Could not read file. Please try saving as .csv and uploading again.");
+    }
+  }, []);
+
+  const onDrop = useCallback(async (e) => {
+    e.preventDefault(); setDragOver(false);
+    const file = e.dataTransfer?.files?.[0] ?? e.target?.files?.[0];
+    if (file) await handleFile(file);
+  }, [handleFile]);
+
+  const generate = async () => {
+    if (!rawText.trim() && !parsedFile) return;
+    setScreen("processing"); setError(null); setPct(8);
+
+    // Build rich data context
+    let dataContext = "";
+    if (parsedFile) {
+      dataContext += `SOURCE FILE: ${parsedFile.fileName}\nTotal rows: ${parsedFile.totalRows}\nSheets: ${parsedFile.sheetNames.join(", ")}\n\n`;
+      Object.entries(parsedFile.sheets).forEach(([name, s]) => {
+        dataContext += `\n=== SHEET: "${name}" (${s.rowCount} rows) ===\n${sheetToText(s, 35)}\n`;
+      });
+    } else {
+      dataContext = rawText.slice(0, 4500);
+    }
+
+    try {
+      setStepMsg("🔍 RAG Pass 1 — Ingesting & structuring unstructured data..."); setPct(18);
+
+      const analysisText = await callClaude(
+        "You are a senior ERP data analyst. ALWAYS respond with pure valid JSON only. No markdown. No code fences. No extra text before or after the JSON.",
+        `Analyze ALL of the following business data. Extract every meaningful metric and pattern.
+
+DATA:
+${dataContext}
+
+Department hint: ${dept ?? "auto-detect from content"}
+
+Return ONLY valid JSON matching this exact schema:
+{
+  "department": "sales|hr|operations|finance|marketing|supply|it|executive",
+  "title": "Precise title based on the actual data content",
+  "period": "Time period detected in data (e.g. Q1-Q4 2024, Jan-Dec 2023)",
+  "summary": "2-sentence summary of what this data represents",
+  "kpis": [
+    {"label":"metric name","value":"actual figure from data","unit":"$|%|units|hrs|days|etc","trend":"up|down|stable","change":"e.g. +12.3% MoM","color":"#hex"}
+  ],
+  "charts": [
+    {"id":"c1","type":"area|bar|line|pie|radar","title":"Chart title","subtitle":"What it tracks","data":[{"name":"label","value":numeric,"secondary":numeric_or_null}]}
+  ],
+  "insights": [
+    {"type":"positive|negative|neutral|alert","text":"Specific insight with real numbers","icon":"emoji"}
+  ],
+  "recommendations": ["Specific actionable step based on the data"],
+  "dataQuality": {"score":85,"issues":["found issues"],"completeness":"92%"},
+  "executiveSummary": "4-5 sentence board-level narrative with specific numbers"
+}
+
+CRITICAL RULES:
+- Use ACTUAL values from the data — no invented placeholder numbers
+- 7-10 KPIs derived from the real data columns/values
+- 5 charts with real data points (6-10 points per chart min)
+- 6-8 insights about real patterns visible in the data
+- 4-5 recommendations grounded in what the data shows
+- Charts must use real column values as data points
+- If multiple sheets exist, synthesize across all of them`,
+        5000
+      );
+
+      setPct(65); setStepMsg("🧠 RAG Pass 2 — Generating board narrative...");
+
+      let parsed;
+      try {
+        const cleaned = analysisText.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
+        parsed = JSON.parse(cleaned);
+      } catch (parseErr) {
+        // Try to extract JSON from response
+        const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try { parsed = JSON.parse(jsonMatch[0]); }
+          catch { throw new Error("AI returned malformed data. Please simplify your input and retry."); }
+        } else {
+          throw new Error("AI returned malformed data. Please simplify your input and retry.");
+        }
+      }
+
+      // Pass 2: enhanced narrative
+      const narrative = await callClaude(
+        "You are a CFO. Write board-level narrative: concise, data-driven, strategic. No bullet points. 4-5 sentences.",
+        `Write a CFO board presentation narrative for the ${parsed.department} department.
+KPIs: ${JSON.stringify((parsed.kpis ?? []).slice(0, 6))}
+Key insights: ${JSON.stringify((parsed.insights ?? []).slice(0, 3))}
+Top recommendation: ${(parsed.recommendations ?? [])[0] ?? ""}
+Be specific with numbers. Present context, performance, and forward direction.`,
+        500
+      );
+
+      setPct(95); setStepMsg("✅ Finalizing dashboard...");
+      await new Promise(r => setTimeout(r, 350));
+
+      setDashboard({
+        ...parsed,
+        narrative,
+        generatedAt: new Date().toLocaleString(),
+        _totalRows: parsedFile?.totalRows ?? "N/A",
+      });
+      setActiveTab("overview");
+      setScreen("dashboard");
+    } catch (err) {
+      setError(err.message ?? "Generation failed. Please try again.");
+      setScreen("input");
+    }
+  };
+
+  const doExport = async (type) => {
+    setExporting(type);
+    try {
+      if (type === "xlsx") exportToExcel(dashboard, parsedFile);
+      else if (type === "pdf") exportToPDF(dashboard);
+      else if (type === "pptx") await exportToPPTX(dashboard);
+    } catch (err) {
+      alert(`Export failed: ${err.message}\n\nFor PDF/PPT: make sure pop-ups are allowed in your browser.`);
+    } finally {
+      setTimeout(() => setExporting(null), 2000);
+    }
+  };
+
+  const reset = () => {
+    setScreen("input"); setDashboard(null); setParsedFile(null);
+    setRawText(""); setDept(null); setError(null); setPct(0);
+  };
+
+  return (
+    <>
+      <style>{STYLE}</style>
+      <div style={{ minHeight: "100vh" }}>
+        <AppHeader screen={screen} onReset={reset} />
+        {screen === "processing" && <ProcessingView stepMsg={stepMsg} pct={pct} />}
+        {screen === "input" && (
+          <InputView
+            rawText={rawText} setRawText={setRawText}
+            parsedFile={parsedFile} setParsedFile={setParsedFile}
+            dept={dept} setDept={setDept}
+            dragOver={dragOver} setDragOver={setDragOver}
+            fileRef={fileRef} onDrop={onDrop}
+            onGenerate={generate} error={error} setError={setError}
+          />
+        )}
+        {screen === "dashboard" && dashboard && (
+          <DashboardView
+            dashboard={dashboard} parsedFile={parsedFile}
+            activeTab={activeTab} setActiveTab={setActiveTab}
+            doExport={doExport} exporting={exporting}
+          />
+        )}
+      </div>
+    </>
+  );
+}
+
+// ─── APP HEADER ───────────────────────────────────────────────────────────────
+function AppHeader({ screen, onReset }) {
+  return (
+    <div style={{ height: 58, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 28px", position: "sticky", top: 0, zIndex: 100, background: T.bg }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+        <div style={{ width: 33, height: 33, borderRadius: 9, background: `linear-gradient(135deg,${T.accent},${T.accent2})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>⚡</div>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: "-.01em" }}>NEXUS ERP</div>
+          <div style={{ fontSize: 9.5, color: T.muted, letterSpacing: ".07em", textTransform: "uppercase", marginTop: -1 }}>AI Dashboard Intelligence</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span className="badge" style={{ background: `${T.accent}14`, color: T.accent, border: `1px solid ${T.accent}33` }}>
+          <span style={{ width: 5, height: 5, borderRadius: "50%", background: T.accent, animation: "pulse 1.5s infinite" }} />
+          RAG ACTIVE
+        </span>
+        {screen === "dashboard" && (
+          <button onClick={onReset}
+            style={{ padding: "5px 14px", background: "transparent", border: `1px solid ${T.border}`, borderRadius: 7, color: T.muted, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+            ← New Analysis
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── PROCESSING VIEW ──────────────────────────────────────────────────────────
+function ProcessingView({ stepMsg, pct }) {
+  return (
+    <div style={{ minHeight: "calc(100vh - 58px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 26 }}>
+      <div style={{ position: "relative", width: 84, height: 84 }}>
+        <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `2.5px solid ${T.border}` }} />
+        <div className="spin" style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `2.5px solid transparent`, borderTopColor: T.accent }} />
+        <div style={{ position: "absolute", inset: 9, borderRadius: "50%", border: `2px solid transparent`, borderTopColor: T.accent2, animation: "spin .6s linear infinite reverse" }} />
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>⚡</div>
+      </div>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 7 }}>Processing Your Data</div>
+        <div className="mono" style={{ color: T.accent, fontSize: 13 }}>{stepMsg}</div>
+      </div>
+      <div style={{ width: 280, background: T.border, borderRadius: 100, height: 5, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg,${T.accent},${T.accent2})`, transition: "width .7s ease", borderRadius: 100 }} />
+      </div>
+      <div style={{ color: T.muted, fontSize: 13, maxWidth: 340, textAlign: "center", lineHeight: 1.7 }}>
+        RAG pipeline: ingest → detect structure → extract KPIs → synthesize charts → generate board report
+      </div>
+    </div>
+  );
+}
+
+// ─── INPUT VIEW ───────────────────────────────────────────────────────────────
+const SAMPLES = [
+  { label: "Sales Q-Data", dept: "sales", data: "Month,Revenue,Target,Units,Returns,Region\nJan,245000,220000,1200,45,North\nFeb,289000,250000,1450,38,North\nMar,312000,280000,1580,52,South\nApr,278000,290000,1390,61,South\nMay,345000,310000,1720,44,East\nJun,398000,340000,1990,39,East\nJul,421000,380000,2100,55,West\nAug,387000,390000,1930,67,West\nSep,445000,410000,2220,42,North\nOct,478000,440000,2390,49,South\nNov,512000,480000,2560,53,East\nDec,589000,520000,2940,61,West" },
+  { label: "HR Analytics", dept: "hr", data: "EmployeeID,Department,Salary,Performance,Tenure,Satisfaction,TurnoverRisk,TrainingHrs\nE001,Engineering,95000,4.5,3,8,Low,42\nE002,Sales,72000,3.8,5,6,Medium,18\nE003,Marketing,68000,4.2,2,7,Low,24\nE004,HR,65000,4.0,7,9,Low,30\nE005,Operations,78000,3.5,4,5,High,12\nE006,Finance,88000,4.7,6,8,Low,36\nE007,Engineering,102000,4.8,4,9,Low,48\nE008,Sales,69000,3.2,1,4,High,10" },
+  { label: "Operations", dept: "operations", data: "Week,Line,Efficiency,DowntimeHrs,OutputUnits,DefectRate,CostPerUnit,OEE\nW1,LineA,87,4.2,15200,1.2,23.4,84\nW2,LineA,91,2.8,16100,0.9,22.1,89\nW3,LineB,85,5.1,14800,1.5,24.2,82\nW4,LineB,93,1.9,16800,0.7,21.3,91\nW5,LineA,89,3.4,15600,1.1,22.8,87\nW6,LineB,94,1.5,17200,0.6,20.9,93\nW7,LineA,88,3.8,15900,1.0,23.0,86\nW8,LineB,96,1.2,17800,0.5,20.1,95" },
+  { label: "Finance P&L", dept: "finance", data: "Quarter,Revenue,COGS,GrossProfit,OpEx,EBITDA,NetIncome,CashFlow\nQ1-2023,2340000,1120000,1220000,680000,540000,312000,445000\nQ2-2023,2780000,1290000,1490000,720000,770000,428000,562000\nQ3-2023,3120000,1450000,1670000,750000,920000,510000,635000\nQ4-2023,3450000,1580000,1870000,810000,1060000,598000,724000\nQ1-2024,2890000,1340000,1550000,700000,850000,465000,520000\nQ2-2024,3210000,1480000,1730000,760000,970000,541000,618000" },
+];
+
+function InputView({ rawText, setRawText, parsedFile, setParsedFile, dept, setDept, dragOver, setDragOver, fileRef, onDrop, onGenerate, error, setError }) {
+  const canGenerate = rawText.trim().length > 0 || parsedFile != null;
+  return (
+    <div style={{ maxWidth: 840, margin: "0 auto", padding: "48px 20px" }}>
+      {/* Hero */}
+      <div className="au" style={{ textAlign: "center", marginBottom: 48 }}>
+        <h1 style={{ fontWeight: 800, fontSize: 44, letterSpacing: "-.04em", lineHeight: 1.1, marginBottom: 13 }}>
+          Unstructured Data →<br />
+          <span style={{ background: `linear-gradient(135deg,${T.accent},${T.accent2})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            Board-Ready Intelligence
+          </span>
+        </h1>
+        <p style={{ color: T.muted, fontSize: 15.5, maxWidth: 480, margin: "0 auto", lineHeight: 1.75 }}>
+          Upload any Excel (.xlsx/.xls), CSV, or paste raw data. AI auto-detects structure, extracts KPIs, and builds interactive dashboards with real exports.
+        </p>
+      </div>
+
+      {/* Department chips */}
+      <div className="au1" style={{ marginBottom: 26 }}>
+        <div style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 9, fontWeight: 700 }}>Department <span style={{ color: T.border, fontWeight: 400 }}>(optional — AI auto-detects)</span></div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+          {DEPTS.map(d => (
+            <button key={d.id} onClick={() => setDept(d.id === dept ? null : d.id)}
+              style={{ padding: "6px 13px", borderRadius: 100, border: `1px solid ${dept === d.id ? d.color + "66" : T.border}`, background: dept === d.id ? d.color + "14" : "transparent", color: dept === d.id ? d.color : T.muted, fontSize: 12.5, fontWeight: 500, cursor: "pointer", transition: ".15s", whiteSpace: "nowrap" }}>
+              {d.icon} {d.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* File Drop Zone */}
+      <div className="au2"
+        onClick={() => fileRef.current.click()}
+        onDrop={onDrop} onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)}
+        style={{ border: `2px dashed ${dragOver ? T.accent : T.border}`, borderRadius: 13, padding: "26px 22px", textAlign: "center", cursor: "pointer", background: dragOver ? `${T.accent}07` : "rgba(255,255,255,.01)", transition: ".2s", marginBottom: 12 }}>
+        <input ref={fileRef} type="file" accept=".csv,.tsv,.txt,.xls,.xlsx" style={{ display: "none" }} onChange={onDrop} />
+        <div style={{ fontSize: 34, marginBottom: 9 }}>📂</div>
+        <div style={{ fontWeight: 700, fontSize: 14.5, marginBottom: 3 }}>Drop Excel / CSV file or click to browse</div>
+        <div style={{ color: T.muted, fontSize: 12.5 }}>Supports .xlsx .xls .csv .tsv .txt — multi-sheet workbooks fully supported</div>
+        {parsedFile && (
+          <div style={{ marginTop: 13, display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", background: `${T.accent3}15`, border: `1px solid ${T.accent3}44`, borderRadius: 8, color: T.accent3, fontSize: 12.5, fontWeight: 600 }}>
+            ✅ {parsedFile.fileName} · {parsedFile.sheetNames.length} sheet{parsedFile.sheetNames.length > 1 ? "s" : ""} · {parsedFile.totalRows.toLocaleString()} rows loaded
+          </div>
+        )}
+      </div>
+
+      {/* Text area */}
+      <div className="au2" style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: T.muted, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 7, fontWeight: 700 }}>Or paste data / raw text</div>
+        <textarea value={rawText} onChange={e => setRawText(e.target.value)}
+          placeholder={"Paste CSV rows, raw numbers, or describe your data:\n\n\"Q1 sales $2.3M (+12%), Q2 $2.8M (+22%), top product: Widget A 40% of revenue...\"\n\nOr upload a file above — data will appear here automatically."}
+          style={{ width: "100%", minHeight: 120, padding: "13px 15px", borderRadius: 11, border: `1px solid ${T.border}`, background: T.card, color: T.text, fontFamily: "IBM Plex Mono, monospace", fontSize: 12, lineHeight: 1.8, resize: "vertical", outline: "none", transition: "border-color .18s" }}
+          onFocus={e => e.target.style.borderColor = T.accent + "66"}
+          onBlur={e => e.target.style.borderColor = T.border} />
+      </div>
+
+      {/* Sample data */}
+      <div style={{ display: "flex", gap: 7, marginBottom: 26, flexWrap: "wrap", alignItems: "center" }}>
+        <span style={{ fontSize: 11.5, color: T.muted }}>Try samples:</span>
+        {SAMPLES.map(s => (
+          <button key={s.label} onClick={() => { setRawText(s.data); setDept(s.dept); setParsedFile(null); }}
+            style={{ padding: "5px 13px", background: "transparent", border: `1px solid ${T.border}`, borderRadius: 7, color: T.muted, fontSize: 11.5, cursor: "pointer", transition: ".12s" }}
+            onMouseEnter={e => e.target.style.color = T.text} onMouseLeave={e => e.target.style.color = T.muted}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {error && (
+        <div style={{ padding: "11px 15px", borderRadius: 9, background: `${T.danger}14`, border: `1px solid ${T.danger}44`, color: T.danger, marginBottom: 18, fontSize: 13.5 }}>
+          ⚠️ {error}
+        </div>
+      )}
+
+      <button onClick={onGenerate} disabled={!canGenerate}
+        style={{ width: "100%", padding: "16px 28px", fontSize: 15.5, fontWeight: 700, background: canGenerate ? `linear-gradient(135deg,${T.accent},${T.accent2})` : T.border, border: "none", borderRadius: 11, color: "#fff", cursor: canGenerate ? "pointer" : "not-allowed", transition: "all .2s", letterSpacing: ".02em" }}
+        onMouseEnter={e => { if (canGenerate) e.target.style.transform = "translateY(-1px)"; }}
+        onMouseLeave={e => e.target.style.transform = "translateY(0)"}>
+        ⚡ Generate AI Dashboard
+      </button>
+      <p style={{ textAlign: "center", marginTop: 12, color: T.muted, fontSize: 11.5 }}>
+        Powered by Claude RAG · Multi-pass analysis · Export to Excel, PDF & PowerPoint
+      </p>
+    </div>
+  );
+}
+
+// ─── DASHBOARD VIEW ───────────────────────────────────────────────────────────
+function DashboardView({ dashboard, parsedFile, activeTab, setActiveTab, doExport, exporting }) {
+  const dept = DEPTS.find(d => d.id === dashboard.department) ?? DEPTS[0];
+  const TABS = ["overview", "charts", "insights", "executive", "raw data"];
+
+  const ExportBtn = ({ type, icon, label }) => (
+    <button onClick={() => doExport(type)} disabled={!!exporting}
+      style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: exporting === type ? `${T.accent}18` : `${T.card}`, border: `1px solid ${exporting === type ? T.accent : T.border}`, borderRadius: 8, color: exporting === type ? T.accent : T.text, fontSize: 12.5, fontWeight: 500, cursor: exporting ? "wait" : "pointer", transition: ".15s", whiteSpace: "nowrap" }}>
+      {exporting === type ? <span className="spin" style={{ fontSize: 12 }}>⟳</span> : icon}
+      {exporting === type ? "Exporting…" : label}
+    </button>
+  );
+
+  return (
+    <div style={{ maxWidth: 1360, margin: "0 auto", padding: "24px 18px" }}>
+      {/* Top bar */}
+      <div className="au" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 22, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 5 }}>
+            <span style={{ fontSize: 24 }}>{dept.icon}</span>
+            <span className="badge" style={{ background: dept.color + "16", color: dept.color, border: `1px solid ${dept.color}44` }}>{dept.label}</span>
+            <span className="badge" style={{ background: "rgba(255,255,255,.04)", color: T.muted, border: `1px solid ${T.border}` }}>AI Generated</span>
+            {parsedFile && <span className="badge" style={{ background: `${T.accent3}12`, color: T.accent3, border: `1px solid ${T.accent3}33` }}>📁 {parsedFile.fileName}</span>}
+          </div>
+          <h1 style={{ fontWeight: 800, fontSize: 24, letterSpacing: "-.02em", marginBottom: 2 }}>{dashboard.title}</h1>
+          <div style={{ color: T.muted, fontSize: 12.5 }}>Period: {dashboard.period} · Generated {dashboard.generatedAt}</div>
+        </div>
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+          <ExportBtn type="xlsx" icon="📊" label="Excel (.xlsx)" />
+          <ExportBtn type="pdf" icon="📄" label="PDF Report" />
+          <ExportBtn type="pptx" icon="📑" label="PowerPoint" />
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 3, marginBottom: 22, borderBottom: `1px solid ${T.border}` }}>
+        {TABS.map(t => (
+          <button key={t} onClick={() => setActiveTab(t)}
+            style={{ padding: "7px 16px", background: activeTab === t ? `${T.accent}12` : "transparent", border: `1px solid ${activeTab === t ? T.accent + "44" : "transparent"}`, borderRadius: "7px 7px 0 0", borderBottomColor: "transparent", color: activeTab === t ? T.accent : T.muted, fontSize: 12.5, fontWeight: activeTab === t ? 600 : 400, cursor: "pointer", transition: ".12s", textTransform: "capitalize" }}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "overview" && <OverviewTab dashboard={dashboard} />}
+      {activeTab === "charts" && <ChartsTab charts={dashboard.charts} />}
+      {activeTab === "insights" && <InsightsTab dashboard={dashboard} />}
+      {activeTab === "executive" && <ExecutiveTab dashboard={dashboard} />}
+      {activeTab === "raw data" && <RawDataTab dashboard={dashboard} parsedFile={parsedFile} />}
+    </div>
+  );
+}
+
+// ─── TAB COMPONENTS ───────────────────────────────────────────────────────────
+function OverviewTab({ dashboard }) {
+  return (
+    <div>
+      <div className="glass au" style={{ padding: "13px 18px", marginBottom: 22, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ flex: 1, fontSize: 14, lineHeight: 1.75 }}>{dashboard.summary}</div>
+        {dashboard.dataQuality && (
+          <div style={{ textAlign: "center", padding: "9px 18px", borderLeft: `1px solid ${T.border}`, flexShrink: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 28, color: (dashboard.dataQuality.score ?? 0) > 80 ? T.accent3 : T.warn }}>{dashboard.dataQuality.score}%</div>
+            <div style={{ fontSize: 9.5, color: T.muted, textTransform: "uppercase", letterSpacing: ".07em" }}>Data Quality</div>
+            <div style={{ fontSize: 10.5, color: T.muted, marginTop: 1 }}>{dashboard.dataQuality.completeness}</div>
+          </div>
+        )}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(175px,1fr))", gap: 12, marginBottom: 22 }}>
+        {(dashboard.kpis ?? []).map((kpi, i) => (
+          <div key={i} className="card au" style={{ padding: "16px 18px", borderTopWidth: 2, borderTopColor: T.colors[i % 10], animationDelay: `${i * .04}s` }}>
+            <div style={{ fontSize: 10, color: T.muted, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6, fontWeight: 700 }}>{kpi.label}</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 3, marginBottom: 4 }}>
+              <span style={{ fontWeight: 800, fontSize: 24 }}>{kpi.value}</span>
+              {kpi.unit && kpi.unit !== "units" && <span style={{ fontSize: 12, color: T.muted }}>{kpi.unit}</span>}
+            </div>
+            <div style={{ fontSize: 11.5, fontWeight: 600, color: kpi.trend === "up" ? T.accent3 : kpi.trend === "down" ? T.danger : T.muted }}>
+              {kpi.trend === "up" ? "▲" : kpi.trend === "down" ? "▼" : "→"} {kpi.change}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        {(dashboard.charts ?? []).slice(0, 2).map((c, i) => (
+          <div key={i} className="card au1" style={{ padding: 20 }}>
+            <div style={{ fontWeight: 700, marginBottom: 2 }}>{c.title}</div>
+            <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 13 }}>{c.subtitle}</div>
+            <ChartRenderer chart={c} height={190} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChartsTab({ charts }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(420px,1fr))", gap: 16 }}>
+      {(charts ?? []).map((c, i) => (
+        <div key={i} className="card au" style={{ padding: 22, animationDelay: `${i * .055}s` }}>
+          <div style={{ fontWeight: 700, fontSize: 14.5, marginBottom: 2 }}>{c.title}</div>
+          <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 16 }}>{c.subtitle}</div>
+          <ChartRenderer chart={c} height={260} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function InsightsTab({ dashboard }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 18 }}>
+      <div>
+        <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 14 }}>AI Insights</div>
+        {(dashboard.insights ?? []).map((ins, i) => (
+          <div key={i} className="au" style={{ display: "flex", gap: 11, padding: "12px 14px", marginBottom: 9, borderRadius: 10, border: `1px solid ${T.border}`, background: "rgba(255,255,255,.015)", animationDelay: `${i * .05}s`, transition: "border-color .15s" }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = T.accent + "44"}
+            onMouseLeave={e => e.currentTarget.style.borderColor = T.border}>
+            <span style={{ fontSize: 21, flexShrink: 0 }}>{ins.icon}</span>
+            <div>
+              <span className="badge" style={{ marginBottom: 4, background: ins.type === "positive" ? `${T.accent3}16` : ins.type === "negative" ? `${T.danger}16` : ins.type === "alert" ? `${T.warn}16` : "rgba(255,255,255,.04)", color: ins.type === "positive" ? T.accent3 : ins.type === "negative" ? T.danger : ins.type === "alert" ? T.warn : T.muted }}>{ins.type}</span>
+              <div style={{ fontSize: 13, lineHeight: 1.65 }}>{ins.text}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div>
+        <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 14 }}>Recommendations</div>
+        {(dashboard.recommendations ?? []).map((rec, i) => (
+          <div key={i} className="au" style={{ display: "flex", gap: 9, padding: "12px 13px", marginBottom: 9, borderRadius: 10, border: `1px solid ${T.accent}33`, background: `${T.accent}05`, animationDelay: `${i * .06}s` }}>
+            <span style={{ color: T.accent, fontWeight: 800, fontSize: 14, flexShrink: 0, marginTop: 1 }}>→</span>
+            <div style={{ fontSize: 13, lineHeight: 1.65 }}>{rec}</div>
+          </div>
+        ))}
+        {dashboard.dataQuality && (
+          <div className="card" style={{ padding: 16, marginTop: 18 }}>
+            <div style={{ fontWeight: 700, marginBottom: 11, fontSize: 13.5 }}>Data Quality Report</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 7 }}>
+              <div style={{ flex: 1, height: 5, background: T.border, borderRadius: 100, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${dashboard.dataQuality.score}%`, background: `linear-gradient(90deg,${T.accent3},${T.accent})`, borderRadius: 100 }} />
+              </div>
+              <span style={{ fontWeight: 800, fontSize: 17 }}>{dashboard.dataQuality.score}%</span>
+            </div>
+            <div style={{ fontSize: 11.5, color: T.muted }}>Completeness: {dashboard.dataQuality.completeness}</div>
+            {(dashboard.dataQuality.issues ?? []).map((iss, i) => (
+              <div key={i} style={{ fontSize: 11.5, color: T.warn, marginTop: 4 }}>⚠ {iss}</div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ExecutiveTab({ dashboard }) {
+  return (
+    <div style={{ maxWidth: 800, margin: "0 auto" }}>
+      <div className="card au" style={{ padding: 32, marginBottom: 18 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 18 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 9, background: `linear-gradient(135deg,${T.accent},${T.accent2})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>🏢</div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 16 }}>Board Executive Summary</div>
+            <div style={{ fontSize: 11.5, color: T.muted }}>Period: {dashboard.period}</div>
+          </div>
+        </div>
+        <div style={{ fontSize: 15, lineHeight: 1.9, borderLeft: `3px solid ${T.accent}`, paddingLeft: 16, marginBottom: 20 }}>{dashboard.executiveSummary}</div>
+        <div style={{ fontSize: 13.5, lineHeight: 1.9, color: T.muted }}>{dashboard.narrative}</div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {(dashboard.kpis ?? []).slice(0, 8).map((kpi, i) => (
+          <div key={i} className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 16px" }}>
+            <div>
+              <div style={{ fontSize: 10.5, color: T.muted, marginBottom: 2, textTransform: "uppercase", letterSpacing: ".05em" }}>{kpi.label}</div>
+              <div style={{ fontWeight: 800, fontSize: 19 }}>{kpi.value}{kpi.unit && kpi.unit !== "units" ? " " + kpi.unit : ""}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 19 }}>{kpi.trend === "up" ? "📈" : kpi.trend === "down" ? "📉" : "➡️"}</div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: kpi.trend === "up" ? T.accent3 : kpi.trend === "down" ? T.danger : T.muted }}>{kpi.change}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RawDataTab({ dashboard, parsedFile }) {
+  return (
+    <div>
+      <div className="card au" style={{ padding: 20, marginBottom: 18, overflowX: "auto" }}>
+        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14 }}>KPI Data Table</div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+          <thead><tr style={{ borderBottom: `1px solid ${T.border}` }}>
+            {["Metric", "Value", "Unit", "Trend", "Change"].map(h => (
+              <th key={h} style={{ textAlign: "left", padding: "7px 13px", fontSize: 10.5, color: T.muted, textTransform: "uppercase", letterSpacing: ".06em" }}>{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {(dashboard.kpis ?? []).map((k, i) => (
+              <tr key={i} style={{ borderBottom: `1px solid ${T.border}20`, transition: "background .12s" }}
+                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,.02)"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                <td style={{ padding: "9px 13px", fontWeight: 500 }}>{k.label}</td>
+                <td className="mono" style={{ padding: "9px 13px", color: T.accent }}>{k.value}</td>
+                <td style={{ padding: "9px 13px", color: T.muted }}>{k.unit}</td>
+                <td style={{ padding: "9px 13px" }}>{k.trend === "up" ? "▲ up" : k.trend === "down" ? "▼ down" : "→ stable"}</td>
+                <td style={{ padding: "9px 13px", fontWeight: 700, color: k.trend === "up" ? T.accent3 : k.trend === "down" ? T.danger : T.muted }}>{k.change}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 12, marginBottom: 18 }}>
+        {(dashboard.charts ?? []).map((c, i) => (
+          <div key={i} className="card" style={{ padding: 16 }}>
+            <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 13 }}>{c.title}</div>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
+              <thead><tr style={{ borderBottom: `1px solid ${T.border}` }}>
+                <th style={{ textAlign: "left", padding: "4px 0", color: T.muted, fontSize: 10, textTransform: "uppercase" }}>Label</th>
+                <th style={{ textAlign: "right", padding: "4px 0", color: T.muted, fontSize: 10, textTransform: "uppercase" }}>Value</th>
+                {(c.data ?? []).some(d => d.secondary) && <th style={{ textAlign: "right", padding: "4px 0", color: T.muted, fontSize: 10, textTransform: "uppercase" }}>2nd</th>}
+              </tr></thead>
+              <tbody>
+                {(c.data ?? []).map((row, j) => (
+                  <tr key={j} style={{ borderTop: `1px solid ${T.border}25` }}>
+                    <td style={{ padding: "4px 0" }}>{row.name}</td>
+                    <td className="mono" style={{ padding: "4px 0", textAlign: "right", color: T.accent }}>{row.value}</td>
+                    {row.secondary != null && <td className="mono" style={{ padding: "4px 0", textAlign: "right", color: T.accent2 }}>{row.secondary}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </div>
+
+      {parsedFile && Object.entries(parsedFile.sheets).map(([name, sheet]) => (
+        <div key={name} className="card au2" style={{ padding: 18, marginBottom: 12, overflowX: "auto" }}>
+          <div style={{ fontWeight: 700, marginBottom: 11, fontSize: 13 }}>📄 Source: "{name}" — {sheet.rowCount} rows</div>
+          {(sheet.raw ?? []).length > 0 && (
+            <table style={{ borderCollapse: "collapse", fontSize: 10.5, minWidth: "100%" }}>
+              <thead><tr style={{ borderBottom: `1px solid ${T.border}` }}>
+                {(sheet.raw[0] ?? []).map((h, i) => (
+                  <th key={i} style={{ padding: "5px 10px", textAlign: "left", color: T.muted, fontWeight: 600, whiteSpace: "nowrap", background: T.surface }}>{h || `Col ${i + 1}`}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {sheet.raw.slice(1, 18).map((row, ri) => (
+                  <tr key={ri} style={{ borderTop: `1px solid ${T.border}22`, transition: "background .1s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,.02)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    {row.map((cell, ci) => (
+                      <td key={ci} className="mono" style={{ padding: "4px 10px", whiteSpace: "nowrap", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>{String(cell ?? "")}</td>
+                    ))}
+                  </tr>
+                ))}
+                {sheet.raw.length > 18 && (
+                  <tr><td colSpan={(sheet.raw[0] ?? []).length} style={{ padding: "7px 10px", color: T.muted, fontSize: 10.5 }}>… {sheet.raw.length - 18} more rows</td></tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── CHART RENDERER ───────────────────────────────────────────────────────────
+const TT_STYLE = {
+  contentStyle: { background: T.card, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 11.5 },
+  labelStyle: { color: T.muted },
+  itemStyle: { color: T.text },
+};
+
+function ChartRenderer({ chart, height = 255 }) {
+  if (!chart?.data?.length) {
+    return <div style={{ height, display: "flex", alignItems: "center", justifyContent: "center", color: T.muted, fontSize: 12.5 }}>No data available</div>;
+  }
+  const hasSecondary = chart.data.some(d => d.secondary != null && d.secondary !== "");
+
+  if (chart.type === "pie") return (
+    <ResponsiveContainer width="100%" height={height}>
+      <PieChart>
+        <Pie data={chart.data} dataKey="value" nameKey="name" cx="50%" cy="50%"
+          outerRadius={height * 0.36} innerRadius={height * 0.18} paddingAngle={2} strokeWidth={0}>
+          {chart.data.map((_, i) => <Cell key={i} fill={T.colors[i % T.colors.length]} />)}
+        </Pie>
+        <Tooltip {...TT_STYLE} />
+        <Legend wrapperStyle={{ fontSize: 11, color: T.muted }} />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+
+  if (chart.type === "radar") return (
+    <ResponsiveContainer width="100%" height={height}>
+      <RadarChart data={chart.data}>
+        <PolarGrid stroke={T.border} />
+        <PolarAngleAxis dataKey="name" tick={{ fill: T.muted, fontSize: 10 }} />
+        <PolarRadiusAxis tick={{ fill: T.muted, fontSize: 9 }} />
+        <Radar dataKey="value" stroke={T.accent} fill={T.accent} fillOpacity={0.16} />
+        {hasSecondary && <Radar dataKey="secondary" stroke={T.accent2} fill={T.accent2} fillOpacity={0.1} />}
+        <Tooltip {...TT_STYLE} />
+      </RadarChart>
+    </ResponsiveContainer>
+  );
+
+  if (chart.type === "bar") return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={chart.data} barGap={2}>
+        <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
+        <XAxis dataKey="name" tick={{ fill: T.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fill: T.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
+        <Tooltip {...TT_STYLE} />
+        {hasSecondary && <Legend wrapperStyle={{ fontSize: 11, color: T.muted }} />}
+        <Bar dataKey="value" fill={T.accent} radius={[5, 5, 0, 0]} name="Value" />
+        {hasSecondary && <Bar dataKey="secondary" fill={T.accent2} radius={[5, 5, 0, 0]} name="Target" />}
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
+  if (chart.type === "line") return (
+    <ResponsiveContainer width="100%" height={height}>
+      <LineChart data={chart.data}>
+        <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
+        <XAxis dataKey="name" tick={{ fill: T.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fill: T.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
+        <Tooltip {...TT_STYLE} />
+        {hasSecondary && <Legend wrapperStyle={{ fontSize: 11, color: T.muted }} />}
+        <Line type="monotone" dataKey="value" stroke={T.accent} strokeWidth={2.5} dot={{ fill: T.accent, r: 3.5, strokeWidth: 0 }} name="Value" />
+        {hasSecondary && <Line type="monotone" dataKey="secondary" stroke={T.accent2} strokeWidth={2} strokeDasharray="5 4" dot={{ fill: T.accent2, r: 3, strokeWidth: 0 }} name="Target" />}
+      </LineChart>
+    </ResponsiveContainer>
+  );
+
+  // area (default)
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart data={chart.data}>
+        <defs>
+          <linearGradient id={`ga${chart.id}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={T.accent} stopOpacity={0.26} />
+            <stop offset="95%" stopColor={T.accent} stopOpacity={0} />
+          </linearGradient>
+          <linearGradient id={`gb${chart.id}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={T.accent2} stopOpacity={0.2} />
+            <stop offset="95%" stopColor={T.accent2} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
+        <XAxis dataKey="name" tick={{ fill: T.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fill: T.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
+        <Tooltip {...TT_STYLE} />
+        {hasSecondary && <Legend wrapperStyle={{ fontSize: 11, color: T.muted }} />}
+        <Area type="monotone" dataKey="value" stroke={T.accent} fill={`url(#ga${chart.id})`} strokeWidth={2.5} name="Value" />
+        {hasSecondary && <Area type="monotone" dataKey="secondary" stroke={T.accent2} fill={`url(#gb${chart.id})`} strokeWidth={2} name="Target" />}
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
