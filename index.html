@@ -2,450 +2,412 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <meta name="description" content="NEXUS ERP — Power BI × AI Dashboard Intelligence. Upload any CSV, Excel or PDF and get an instant interactive board-ready dashboard." />
-  <title>NEXUS ERP — Power BI × AI Dashboard Intelligence</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEXUS ERP — Power BI × AI Intelligence</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    html,body{background:#060A12;color:#E2EBF6;font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
-    #root{min-height:100vh}
-    #splash{position:fixed;inset:0;background:#060A12;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:9999;transition:opacity .4s}
-    #splash.hide{opacity:0;pointer-events:none}
-    .sp-logo{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#00D4FF,#7C3AED);display:flex;align-items:center;justify-content:center;font-size:26px}
-    .sp-ring{width:42px;height:42px;border-radius:50%;border:3px solid #1A2B40;border-top-color:#00D4FF;animation:sp-spin .8s linear infinite}
-    .sp-text{color:#4A6585;font-size:13px;letter-spacing:.07em;text-transform:uppercase}
-    @keyframes sp-spin{to{transform:rotate(360deg)}}
+    :root {
+      --bg: #060A12;
+      --card: #0C1422;
+      --card-alt: #111B2D;
+      --border: #1A2B40;
+      --accent: #00D4FF;
+      --accent-glow: rgba(0, 212, 255, 0.3);
+      --accent2: #7C3AED;
+      --text: #E2EBF6;
+      --muted: #4A6585;
+      --success: #10B981;
+      --danger: #EF4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      background: var(--bg); 
+      color: var(--text); 
+      font-family: 'DM Sans', sans-serif; 
+      line-height: 1.6;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    .app-shell { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+    .top-nav {
+      height: 70px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 30px;
+      position: sticky;
+      top: 0;
+      background: rgba(6, 10, 18, 0.8);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+
+    /* ── UI Components ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .kpi-tile {
+      padding: 24px;
+      border-left: 4px solid var(--accent);
+      background: var(--card-alt);
+    }
+    .kpi-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+    .kpi-value { font-size: 28px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+    
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      font-family: inherit;
+      transition: 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary { background: var(--accent); color: #000; border: none; }
+    .btn-primary:hover { box-shadow: 0 0 20px var(--accent-glow); transform: translateY(-1px); }
+    .btn-outline { background: transparent; color: var(--text); }
+    .btn-outline:hover { background: var(--border); }
+
+    .input-field {
+      width: 100%;
+      background: #08101C;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      resize: vertical;
+      min-height: 200px;
+    }
+
+    /* ── Animation ── */
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-up { animation: slideUp 0.5s ease forwards; }
+
+    /* ── Loading Overlay ── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .loader {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
 
-<div id="splash">
-  <div class="sp-logo">⚡</div>
-  <div class="sp-ring"></div>
-  <div class="sp-text">Loading NEXUS ERP…</div>
-</div>
-
 <div id="root"></div>
 
-<script type="text/babel" data-presets="react">
-const { useState, useCallback, useRef, useEffect, useMemo } = React;
+<script type="text/babel">
+  const { useState, useEffect, useRef, useMemo } = React;
+  
+  // ── RECHARTS MAPPING ──
+  const { 
+    AreaChart, Area, BarChart, Bar, XAxis, YAxis, 
+    CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie 
+  } = window.Recharts;
 
-/* FIX: Recharts Global Mapping for CDN */
-const RechartsObj = window.Recharts;
-const {
-  AreaChart, Area, BarChart, Bar, LineChart, Line,
-  PieChart, Pie, Cell, ScatterChart, Scatter,
-  RadarChart, Radar, RadialBarChart, RadialBar,
-  ComposedChart, Treemap, FunnelChart, Funnel, LabelList,
-  XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, PolarGrid, PolarAngleAxis,
-  PolarRadiusAxis, ReferenceLine,
-} = RechartsObj;
+  function App() {
+    const [view, setView] = useState('input');
+    const [apiKey, setApiKey] = useState('');
+    const [dataContent, setDataContent] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [step, setStep] = useState('');
+    const [dashboard, setDashboard] = useState(null);
+    const [error, setError] = useState(null);
 
-// ── Theme & Constants ─────────────────────────────────────────────────────────
-const T = {
-  bg: "#060A12", card: "#0C1422", card2: "#111B2D", border: "#1A2B40",
-  accent: "#00D4FF", accent2: "#7C3AED", accent3: "#10B981",
-  warn: "#F59E0B", danger: "#EF4444", text: "#E2EBF6", muted: "#4A6585",
-  subtle: "#1E3050",
-  colors: ["#00D4FF","#7C3AED","#10B981","#F59E0B","#F97316","#EF4444","#06D6A0","#3B82F6","#EC4899","#14B8A6","#8B5CF6","#84CC16"],
-};
+    // ── RAG LOGIC: DATA INGESTION ──
+    const handleFile = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      setStep('Ingesting file...');
+      const reader = new FileReader();
 
-const DEPTS = [
-  {id:"sales", label:"Sales", icon:"📈", color:"#00D4FF"},
-  {id:"hr", label:"HR & People", icon:"👥", color:"#7C3AED"},
-  {id:"operations", label:"Operations", icon:"⚙️", color:"#10B981"},
-  {id:"finance", label:"Finance", icon:"💰", color:"#F59E0B"},
-  {id:"marketing", label:"Marketing", icon:"📣", color:"#F97316"},
-  {id:"supply", label:"Supply Chain", icon:"🚚", color:"#06D6A0"},
-  {id:"it", label:"IT & Tech", icon:"💻", color:"#EF4444"},
-  {id:"executive", label:"Executive", icon:"🏢", color:"#3B82F6"},
-];
-
-const CHART_REGISTRY = [
-  { id:"bar", label:"Bar", icon:"▌▌▌", cat:"comparison" },
-  { id:"hbar", label:"H-Bar", icon:"═══", cat:"comparison" },
-  { id:"grouped", label:"Grouped", icon:"▌│▌", cat:"comparison" },
-  { id:"stacked", label:"Stacked", icon:"▓▓▓", cat:"comparison" },
-  { id:"lollipop", label:"Lollipop", icon:"⊙⊙⊙", cat:"comparison" },
-  { id:"waterfall", label:"Waterfall", icon:"▁▃▅▇", cat:"comparison" },
-  { id:"line", label:"Line", icon:"∿∿∿", cat:"trend" },
-  { id:"area", label:"Area", icon:"◣◣◣", cat:"trend" },
-  { id:"stackedarea", label:"Stk Area", icon:"◤◤◤", cat:"trend" },
-  { id:"stepline", label:"Step", icon:"⌐⌐⌐", cat:"trend" },
-  { id:"combo", label:"Combo", icon:"▌∿▌", cat:"trend" },
-  { id:"pie", label:"Pie", icon:"◔◑◕", cat:"partwhole" },
-  { id:"donut", label:"Donut", icon:"◎◎◎", cat:"partwhole" },
-  { id:"semidonut", label:"Semi", icon:"◠◠◠", cat:"partwhole" },
-  { id:"treemap", label:"Treemap", icon:"▦▦▦", cat:"partwhole" },
-  { id:"funnel", label:"Funnel", icon:"▽▽▽", cat:"partwhole" },
-  { id:"scatter", label:"Scatter", icon:"⠿⠿⠿", cat:"distribution" },
-  { id:"bubble", label:"Bubble", icon:"○●◉", cat:"distribution" },
-  { id:"histogram", label:"Histogram", icon:"█▇▅▃", cat:"distribution" },
-  { id:"heatmap", label:"Heatmap", icon:"▩▩▩", cat:"distribution" },
-  { id:"gauge", label:"Gauge", icon:"◌◍◉", cat:"performance" },
-  { id:"radialbar", label:"Radial", icon:"◜◝◞", cat:"performance" },
-  { id:"bullet", label:"Bullet", icon:"▬▬▬", cat:"performance" },
-  { id:"kpicard", label:"KPI Tile", icon:"◰◱◲", cat:"performance" },
-  { id:"radar", label:"Radar", icon:"⬡⬡⬡", cat:"multidim" },
-  { id:"polararea", label:"Polar", icon:"◉◉◉", cat:"multidim" },
-];
-
-const CAT_LABELS = {
-  comparison:"Comparison", trend:"Trend & Time",
-  partwhole:"Part-to-Whole", distribution:"Distribution",
-  performance:"Performance", multidim:"Multi-Dimensional",
-};
-
-// ── Global CSS ─────────────────────────────────────────────────────────────────
-const STYLE = `
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{background:${T.bg};font-family:'DM Sans',sans-serif;color:${T.text};overflow-x:hidden;min-height:100vh}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:${T.bg}}
-::-webkit-scrollbar-thumb{background:${T.border};border-radius:4px}
-@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-@keyframes spin{to{transform:rotate(360deg)}}
-.au {animation:fadeUp .4s ease both}
-.spin{animation:spin .85s linear infinite}
-.card{background:${T.card};border:1px solid ${T.border};border-radius:12px;transition:border-color .18s}
-.kpi{position:relative;overflow:hidden;background:${T.card};border:1.5px solid ${T.border};border-radius:12px;cursor:pointer;transition:all .2s}
-.kpi.sel{border-color:${T.accent};box-shadow:0 0 0 1px ${T.accent}44}
-.glass{background:rgba(255,255,255,.02);border:1px solid ${T.border};border-radius:11px;backdrop-filter:blur(16px)}
-.mono{font-family:'JetBrains Mono',monospace}
-.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:100px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
-.tab{padding:7px 16px;background:transparent;border:1px solid transparent;border-bottom:none;border-radius:7px 7px 0 0;color:${T.muted};font-size:12.5px;cursor:pointer}
-.tab.on{background:${T.accent}10;border-color:${T.accent}40;color:${T.accent};font-weight:600}
-.chip{padding:5px 11px;border-radius:100px;border:1px solid ${T.border};font-size:11px;cursor:pointer;background:transparent;color:${T.muted}}
-.chip.on{border-color:var(--cc,${T.accent})55;background:color-mix(in srgb,var(--cc,${T.accent}) 11%,transparent);color:var(--cc,${T.accent})}
-.btn{background:rgba(255,255,255,.03);border:1px solid ${T.border};border-radius:8px;color:${T.text};font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:7px 14px}
-.btn.active{border-color:${T.accent3}55;color:${T.accent3}}
-.ctype{padding:4px 8px;border-radius:5px;border:1px solid ${T.border};background:transparent;color:${T.muted};font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer}
-.ctype.on{border-color:${T.accent}55;color:${T.accent};background:${T.accent}12}
-.slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:${T.border};outline:none;cursor:pointer}
-.slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:${T.accent};border:2.5px solid ${T.bg}}
-.field{background:${T.card};border:1px solid ${T.border};border-radius:9px;color:${T.text};outline:none;width:100%}
-.viz-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:9px 5px;border-radius:9px;border:1px solid ${T.border};background:transparent;cursor:pointer;color:${T.muted}}
-.viz-btn.on{border-color:${T.accent}66;color:${T.accent};background:${T.accent}12}
-.viz-icon{font-size:14px;font-family:'JetBrains Mono',monospace}
-.viz-label{font-size:9.5px;font-weight:600;text-transform:uppercase}
-.pulse-dot{width:6px;height:6px;border-radius:50%;background:${T.accent};display:inline-block;animation:pulse 1.6s ease infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-table{border-collapse:collapse;width:100%}
-th{text-align:left;font-size:10px;color:${T.muted};text-transform:uppercase;padding:6px 12px;background:${T.card};position:sticky;top:0}
-td{padding:7px 12px;font-size:12.5px;border-top:1px solid ${T.border}22}
-`;
-
-// ── Script loader & Parsers ──────────────────────────────────────────────────
-function loadScript(src) {
-  return new Promise((res, rej) => {
-    if (document.querySelector(`script[src="${src}"]`)) return res();
-    const s = document.createElement("script");
-    s.src = src; s.onload = res; s.onerror = rej;
-    document.head.appendChild(s);
-  });
-}
-
-/* FIX: Matching Versions & Proper Worker Path for PDF.js */
-async function parsePDF(file) {
-  const PDFJS_VER = '3.11.174';
-  await loadScript(`https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VER}/pdf.min.js`);
-  const pdfjsLib = window['pdfjs-dist/build/pdf'];
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VER}/pdf.worker.min.js`;
-
-  const buf = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-  let text = "";
-  for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    text += content.items.map(s => s.str).join(" ") + "\n";
-  }
-  return { text: text.slice(0, 8000), pages: pdf.numPages, fileName: file.name };
-}
-
-function parseExcelFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const wb = XLSX.read(new Uint8Array(e.target.result), { type:"array", cellDates:true });
-        const sheets = {};
-        let totalRows = 0;
-        wb.SheetNames.forEach(name => {
-          const ws = wb.Sheets[name];
-          const raw = XLSX.utils.sheet_to_json(ws, { header:1, defval:"" });
-          sheets[name] = { raw, rowCount: raw.length };
-          totalRows += raw.length;
+      if (file.name.endsWith('.pdf')) {
+        const PDFJS_VER = '3.11.174';
+        setStep('Loading PDF Engine...');
+        await new Promise(res => {
+          const s = document.createElement('script');
+          s.src = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VER}/pdf.min.js`;
+          s.onload = res; document.head.appendChild(s);
         });
-        resolve({ sheets, sheetNames: wb.SheetNames, totalRows, fileName: file.name });
-      } catch(err){ reject(err); }
+        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VER}/pdf.worker.min.js`;
+        
+        reader.onload = async () => {
+          const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(reader.result) }).promise;
+          let text = "";
+          for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            text += content.items.map(s => s.str).join(" ") + "\n";
+          }
+          setDataContent(text);
+          setStep('PDF parsed successfully.');
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        reader.onload = (e) => {
+          const wb = XLSX.read(e.target.result, { type: 'binary' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          setDataContent(XLSX.utils.sheet_to_csv(ws));
+          setStep('Excel parsed successfully.');
+        };
+        reader.readAsBinaryString(file);
+      }
     };
-    reader.readAsArrayBuffer(file);
-  });
-}
 
-function sheetToText(sheetData, maxRows = 35) {
-  let out = "";
-  sheetData.raw.slice(0, maxRows).forEach((row, i) => {
-    const line = row.filter(c => c !== "" && c != null).join(" | ");
-    if (line.trim()) out += `R${i+1}: ${line}\n`;
-  });
-  return out;
-}
+    // ── RAG LOGIC: DUAL-PASS ANALYSIS ──
+    const generateIntelligence = async () => {
+      if (!apiKey) return alert("Please enter your Anthropic API Key.");
+      setLoading(true);
+      setError(null);
 
-// ── Claude API CALL ──────────────────────────────────────────────────────────
-async function callClaude(system, user, maxTokens = 5000, apiKey = "") {
-  if (!apiKey) throw new Error("Please enter an Anthropic API Key (top right).");
-  
-  const headers = {
-    "Content-Type": "application/json",
-    "anthropic-version": "2023-06-01",
-    "x-api-key": apiKey,
-    "anthropic-dangerous-direct-browser-access": "true" 
-  };
-  
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: maxTokens,
-      system,
-      messages: [{ role:"user", content: user }],
-    }),
-  });
-  
-  if (!res.ok) {
-    const d = await res.json();
-    throw new Error(d.error?.message || `API error ${res.status}`);
-  }
-  const d = await res.json();
-  return d.content?.[0]?.text ?? "";
-}
+      try {
+        // PASS 1: Structural Extraction
+        setStep('Pass 1: Identifying KPI structures...');
+        const extractRes = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true"
+          },
+          body: JSON.stringify({
+            model: "claude-3-5-sonnet-20241022",
+            max_tokens: 3000,
+            system: "You are a senior ERP analyst. Output ONLY raw JSON.",
+            messages: [{ role: "user", content: `Convert this data into a JSON object with: 
+              { "title": "Dashboard Title", 
+                "kpis": [{"label": "Metric", "value": "Val", "trend": "up|down", "change": "+X%"}], 
+                "charts": [{"type": "bar|area", "title": "Chart Title", "data": [{"name": "Label", "value": 100}]}] 
+              }. DATA: ${dataContent.slice(0, 5000)}` }]
+          })
+        });
 
-// ... (Charts, Gauges, Heatmaps - keeping your logic as it was solid) ...
+        const rawData = await extractRes.json();
+        const contentStr = rawData.content[0].text;
+        const start = contentStr.indexOf('{');
+        const end = contentStr.lastIndexOf('}');
+        const jsonBody = JSON.parse(contentStr.substring(start, end + 1));
 
-// ── Gauge SVG ─────────────────────────────────────────────────────────────────
-function GaugeChart({ value, max=100, color=T.accent, label="" }) {
-  const pct = Math.min(1, Math.max(0, value / max));
-  const r=70, cx=90, cy=90;
-  const toXY = (a, rad) => {
-    const r2 = (a * Math.PI) / 180;
-    return [cx + rad * Math.cos(r2), cy + rad * Math.sin(r2)];
-  };
-  const arcPath = (a1, a2, rad) => {
-    const [x1,y1] = toXY(a1, rad);
-    const [x2,y2] = toXY(a2, rad);
-    const large = Math.abs(a2-a1) > 180 ? 1 : 0;
-    return `M ${x1} ${y1} A ${rad} ${rad} 0 ${large} 1 ${x2} ${y2}`;
-  };
-  const startAngle=-210, sweep=240;
-  const endAngle = startAngle + sweep * pct;
-  return (
-    <svg viewBox="0 0 180 130" style={{width:"100%",maxWidth:180}}>
-      <path d={arcPath(startAngle, startAngle+sweep, r)} fill="none" stroke={T.border} strokeWidth={12} strokeLinecap="round"/>
-      <path d={arcPath(startAngle, endAngle, r)} fill="none" stroke={color} strokeWidth={12} strokeLinecap="round"/>
-      <text x={cx} y={cy-2} textAnchor="middle" fill={T.text} fontSize="22" fontWeight="800" fontFamily="JetBrains Mono">{Math.round(pct*100)}%</text>
-      <text x={cx} y={cy+18} textAnchor="middle" fill={T.muted} fontSize="9">{label}</text>
-    </svg>
-  );
-}
+        // PASS 2: Strategic Narrative
+        setStep('Pass 2: Synthesizing board narrative...');
+        const narrRes = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true"
+          },
+          body: JSON.stringify({
+            model: "claude-3-5-sonnet-20241022",
+            max_tokens: 1500,
+            messages: [{ role: "user", content: `As a CFO, write a high-level 3-paragraph board summary about these results: ${JSON.stringify(jsonBody)}` }]
+          })
+        });
 
-// ── Chart Renderer ─────────────────────────────────────────────────────────────
-function ChartRenderer({ chart, height=255, color }) {
-  const data = chart?.data ?? [];
-  const type = chart?.type ?? "bar";
-  const cc = color || T.accent;
+        const narrData = await narrRes.json();
+        setDashboard({ ...jsonBody, narrative: narrData.content[0].text });
+        setView('dashboard');
+      } catch (err) {
+        setError("AI Synthesis failed. Please check your data or API Key.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (!data.length) return <div style={{height,display:"flex",alignItems:"center",justifyContent:"center",color:T.muted}}>No data</div>;
+    // ── EXPORT ENGINES ──
+    const exportToPDF = () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(22);
+      doc.setTextColor(0, 212, 255);
+      doc.text(dashboard.title, 15, 20);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Generated on ${new Date().toLocaleDateString()}`, 15, 28);
+      
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.text("Executive Narrative", 15, 45);
+      doc.setFontSize(11);
+      doc.text(dashboard.narrative, 15, 55, { maxWidth: 180 });
+      
+      doc.save(`${dashboard.title.replace(/\s+/g, '_')}.pdf`);
+    };
 
-  if (type === "gauge") {
+    const exportToPPTX = () => {
+      let pptx = new PptxGenJS();
+      let slide = pptx.addSlide();
+      slide.background = { color: '060A12' };
+      slide.addText(dashboard.title, { x: 0.5, y: 0.5, fontSize: 32, color: '00D4FF', bold: true });
+      slide.addText(dashboard.narrative, { x: 0.5, y: 1.5, fontSize: 14, color: 'E2EBF6', w: 9 });
+      pptx.writeFile({ fileName: "NEXUS_Board_Report.pptx" });
+    };
+
     return (
-      <div style={{height,display:"flex",flexWrap:"wrap",alignItems:"center",justifyContent:"center",gap:10}}>
-        {data.slice(0,4).map((d2,i)=>(<GaugeChart key={i} value={Number(d2.value)||0} max={100} color={T.colors[i%T.colors.length]} label={d2.name}/>))}
+      <div className="app-shell">
+        {loading && (
+          <div className="overlay">
+            <div className="loader"></div>
+            <p style={{marginTop: '20px', fontWeight: 'bold'}}>{step}</p>
+          </div>
+        )}
+
+        <nav className="top-nav">
+          <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+            <div style={{width: 32, height: 32, background: 'var(--accent)', borderRadius: '6px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#000', fontWeight: 'bold'}}>N</div>
+            <h2 style={{letterSpacing: '-1px'}}>NEXUS <span style={{color: 'var(--accent)'}}>ERP</span></h2>
+          </div>
+          <div style={{display: 'flex', gap: '12px'}}>
+            <input 
+              type="password" 
+              placeholder="Anthropic API Key" 
+              className="btn btn-outline" 
+              style={{cursor: 'text', fontSize: '12px', width: '220px'}} 
+              value={apiKey} 
+              onChange={(e) => setApiKey(e.target.value)} 
+            />
+            {view === 'dashboard' && <button className="btn btn-outline" onClick={() => setView('input')}>New Project</button>}
+          </div>
+        </nav>
+
+        {view === 'input' ? (
+          <div className="animate-up">
+            <div className="card" style={{maxWidth: '800px', margin: '0 auto', textAlign: 'center'}}>
+              <h1 style={{fontSize: '36px', marginBottom: '12px'}}>Intelligence Engine</h1>
+              <p style={{color: 'var(--muted)', marginBottom: '32px'}}>Input your financial data, reports, or CSV logs. Our RAG pipeline identifies KPIs and generates board-level insights.</p>
+              
+              <div style={{marginBottom: '24px'}}>
+                <input type="file" id="fileIn" hidden onChange={handleFile} />
+                <label htmlFor="fileIn" className="btn btn-outline" style={{width: '100%', padding: '40px', borderStyle: 'dashed', justifyContent: 'center'}}>
+                   Click to upload Excel, CSV, or PDF
+                </label>
+                {step && <p style={{fontSize: '12px', marginTop: '10px', color: 'var(--success)'}}>{step}</p>}
+              </div>
+
+              <textarea 
+                className="input-field" 
+                placeholder="Or paste raw text/numbers here..." 
+                value={dataContent}
+                onChange={(e) => setDataContent(e.target.value)}
+              />
+
+              {error && <p style={{color: 'var(--danger)', margin: '16px 0'}}>{error}</p>}
+
+              <button className="btn btn-primary" style={{width: '100%', marginTop: '24px', padding: '16px'}} onClick={generateIntelligence}>
+                ⚡ ANALYZE DATA & GENERATE DASHBOARD
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="animate-up">
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '30px'}}>
+              <div>
+                <span className="badge">AI ANALYSIS COMPLETE</span>
+                <h1 style={{fontSize: '32px'}}>{dashboard.title}</h1>
+              </div>
+              <div style={{display: 'flex', gap: '12px'}}>
+                <button className="btn btn-outline" onClick={exportToPDF}>Download PDF</button>
+                <button className="btn btn-outline" onClick={exportToPPTX}>Export PPTX</button>
+              </div>
+            </div>
+
+            <div className="kpi-grid">
+              {dashboard.kpis.map((k, i) => (
+                <div key={i} className="card kpi-tile" style={{borderLeftColor: i % 2 === 0 ? 'var(--accent)' : 'var(--accent2)'}}>
+                  <div className="kpi-label">{k.label}</div>
+                  <div className="kpi-value">{k.value}</div>
+                  <div style={{fontSize: '13px', fontWeight: 'bold', color: k.trend === 'up' ? 'var(--success)' : 'var(--danger)', marginTop: '4px'}}>
+                    {k.trend === 'up' ? '▲' : '▼'} {k.change}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px'}}>
+              <div className="card">
+                <h3 style={{marginBottom: '20px'}}>Trend Analysis</h3>
+                <div style={{height: '350px'}}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={dashboard.charts[0].data}>
+                      <defs>
+                        <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="var(--accent)" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1A2B40" vertical={false} />
+                      <XAxis dataKey="name" stroke="var(--muted)" fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke="var(--muted)" fontSize={11} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={{background: '#0C1422', border: '1px solid #1A2B40', borderRadius: '8px'}} />
+                      <Area type="monotone" dataKey="value" stroke="var(--accent)" fillOpacity={1} fill="url(#colorVal)" strokeWidth={3} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className="card">
+                <h3 style={{marginBottom: '20px'}}>CFO Executive Narrative</h3>
+                <div style={{padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', color: '#A0AFC0', fontSize: '15px', lineHeight: '1.8', whiteSpace: 'pre-wrap'}}>
+                  {dashboard.narrative}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
-  // Simplified chart mapping logic
-  return (
-    <ResponsiveContainer width="100%" height={height}>
-      {type === "area" ? (
-        <AreaChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
-          <XAxis dataKey="name" tick={{fill:T.muted,fontSize:10}} axisLine={false}/>
-          <YAxis tick={{fill:T.muted,fontSize:10}} axisLine={false}/>
-          <Tooltip contentStyle={{background:T.card,border:`1px solid ${T.border}`}}/>
-          <Area type="monotone" dataKey="value" stroke={cc} fill={cc} fillOpacity={0.2} strokeWidth={2}/>
-        </AreaChart>
-      ) : (
-        <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false}/>
-          <XAxis dataKey="name" tick={{fill:T.muted,fontSize:10}} axisLine={false}/>
-          <YAxis tick={{fill:T.muted,fontSize:10}} axisLine={false}/>
-          <Tooltip contentStyle={{background:T.card,border:`1px solid ${T.border}`}}/>
-          <Bar dataKey="value" fill={cc} radius={[4,4,0,0]}/>
-        </BarChart>
-      )}
-    </ResponsiveContainer>
-  );
-}
-
-// ── VIEWS ────────────────────────────────────────────────────────────────────
-function ProcessingView({stepMsg,pct}) {
-  return (
-    <div style={{minHeight:"calc(100vh - 60px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:28}}>
-      <div className="spin" style={{width:60,height:60,borderRadius:"50%",border:"3px solid #1A2B40",borderTopColor:T.accent}}/>
-      <div style={{textAlign:"center"}}>
-        <div style={{fontWeight:800,fontSize:22,marginBottom:8}}>Processing Data</div>
-        <div style={{fontFamily:"JetBrains Mono",color:T.accent,fontSize:13}}>{stepMsg}</div>
-      </div>
-      <div style={{width:300,background:T.border,height:5,borderRadius:10}}>
-        <div style={{height:"100%",width:`${pct}%`,background:T.accent,transition:"width .5s",borderRadius:10}}/>
-      </div>
-    </div>
-  );
-}
-
-function InputView({rawText,setRawText,parsedFile,setParsedFile,dept,setDept,fileRef,onDrop,onGenerate,error}) {
-  const canGo = rawText.trim().length > 0 || parsedFile != null;
-  return (
-    <div style={{maxWidth:860,margin:"0 auto",padding:"52px 20px"}}>
-      <div className="au" style={{textAlign:"center",marginBottom:40}}>
-        <h1 style={{fontWeight:800,fontSize:46,marginBottom:16}}>Board-Ready Insights</h1>
-        <p style={{color:T.muted,fontSize:16}}>Upload Excel or PDF. AI handles the rest.</p>
-      </div>
-      
-      <div className="au" onClick={()=>fileRef.current.click()} onDrop={onDrop} onDragOver={e=>e.preventDefault()}
-        style={{border:`2px dashed ${T.border}`,borderRadius:14,padding:40,textAlign:"center",cursor:"pointer",background:"rgba(255,255,255,.01)",marginBottom:20}}>
-        <input ref={fileRef} type="file" accept=".csv,.xlsx,.pdf" style={{display:"none"}} onChange={onDrop}/>
-        <div style={{fontSize:40,marginBottom:10}}>📂</div>
-        <div style={{fontWeight:700}}>Click to browse or drop file here</div>
-        {parsedFile && <div style={{marginTop:10,color:T.accent3}}>✅ {parsedFile.fileName} loaded</div>}
-      </div>
-
-      <textarea value={rawText} onChange={e=>setRawText(e.target.value)} placeholder="Or paste raw data here..." 
-        style={{width:"100%",height:150,padding:15,borderRadius:11,background:T.card,color:T.text,border:`1px solid ${T.border}`,fontSize:12,marginBottom:20}}/>
-
-      {error && <div style={{color:T.danger,marginBottom:20}}>⚠️ {error}</div>}
-
-      <button onClick={onGenerate} disabled={!canGo}
-        style={{width:"100%",padding:18,fontSize:16,fontWeight:700,background:canGo ? `linear-gradient(135deg,${T.accent},${T.accent2})` : T.border,border:"none",borderRadius:12,color:"#fff",cursor:canGo?"pointer":"not-allowed"}}>
-        ⚡ Generate AI Dashboard
-      </button>
-    </div>
-  );
-}
-
-// ── MAIN APP ─────────────────────────────────────────────────────────────────
-function App() {
-  const [screen, setScreen] = useState("input");
-  const [parsedFile, setParsedFile] = useState(null);
-  const [rawText, setRawText] = useState("");
-  const [dept, setDept] = useState(null);
-  const [apiKey, setApiKey] = useState("");
-  const [stepMsg, setStepMsg] = useState("");
-  const [pct, setPct] = useState(0);
-  const [dashboard, setDashboard] = useState(null);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [error, setError] = useState(null);
-  const fileRef = useRef();
-
-  const onDrop = async (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer?.files?.[0] ?? e.target?.files?.[0];
-    if (!file) return;
-    try {
-      if (file.name.endsWith(".pdf")) {
-        const d = await parsePDF(file);
-        setParsedFile(d); setRawText(d.text.slice(0, 2000));
-      } else {
-        const d = await parseExcelFile(file);
-        setParsedFile(d); setRawText(sheetToText(Object.values(d.sheets)[0]));
-      }
-    } catch { setError("File read failed."); }
-  };
-
-  const generate = async () => {
-    setScreen("processing"); setPct(10); setStepMsg("Extracting structure...");
-    try {
-      const raw = await callClaude(
-        "Respond only with valid JSON. No markdown.",
-        `Analyze: ${rawText.slice(0, 4000)}. Format: { "title": "", "kpis": [{"label":"", "value":"", "unit":"", "trend":"up|down", "change":""}], "charts": [{"type":"bar", "title":"", "data":[{"name":"", "value":0}]}] }`,
-        4000, apiKey
-      );
-      
-      setPct(80); setStepMsg("Parsing JSON...");
-      /* FIX: Robust JSON Parsing */
-      let cleanJSON = raw.replace(/```json/gi, "").replace(/```/gi, "").trim();
-      const first = cleanJSON.indexOf('{');
-      const last = cleanJSON.lastIndexOf('}');
-      const parsed = JSON.parse(cleanJSON.substring(first, last + 1));
-      
-      setDashboard({ ...parsed, generatedAt: new Date().toLocaleTimeString() });
-      setScreen("dashboard");
-    } catch(err) {
-      setError(err.message); setScreen("input");
-    }
-  };
-
-  return (
-    <>
-      <style>{STYLE}</style>
-      <div style={{height:60,borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",background:T.bg}}>
-        <div style={{fontWeight:800}}>NEXUS ERP ⚡</div>
-        <div style={{display:"flex",gap:10}}>
-          <input type="password" placeholder="Anthropic Key" value={apiKey} onChange={e=>setApiKey(e.target.value)}
-            style={{padding:"5px 10px",borderRadius:5,background:T.card,border:`1px solid ${T.border}`,color:T.text,fontSize:11}}/>
-          {screen === "dashboard" && <button onClick={()=>setScreen("input")} className="btn">New</button>}
-        </div>
-      </div>
-
-      {screen === "processing" && <ProcessingView stepMsg={stepMsg} pct={pct}/>}
-      {screen === "input" && <InputView rawText={rawText} setRawText={setRawText} parsedFile={parsedFile} fileRef={fileRef} onDrop={onDrop} onGenerate={generate} error={error}/>}
-      {screen === "dashboard" && dashboard && (
-        <div style={{padding:20,maxWidth:1200,margin:"0 auto"}}>
-          <h1 className="au">{dashboard.title}</h1>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:15,marginTop:20}}>
-            {dashboard.kpis.map((k,i)=>(
-              <div key={i} className="kpi au" style={{padding:20,borderTop:`3px solid ${T.colors[i%12]}`}}>
-                <div style={{fontSize:10,color:T.muted}}>{k.label}</div>
-                <div style={{fontSize:24,fontWeight:800}}>{k.value} {k.unit}</div>
-                <div style={{color:k.trend==="up"?T.accent3:T.danger}}>{k.change}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginTop:20}}>
-            {dashboard.charts.map((c,i)=>(
-              <div key={i} className="card au" style={{padding:20}}>
-                <div style={{fontWeight:700,marginBottom:15}}>{c.title}</div>
-                <ChartRenderer chart={c} color={T.colors[i%12]}/>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App/>);
-
-setTimeout(()=>{
-  const s=document.getElementById("splash");
-  if(s){ s.classList.add("hide"); }
-},500);
+  const root = ReactDOM.createRoot(document.getElementById("root"));
+  root.render(<App />);
 </script>
 
 </body>
