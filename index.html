@@ -223,9 +223,12 @@ tr:hover td{background:rgba(255,255,255,.015)}
     <a href="https://console.anthropic.com" target="_blank" rel="noreferrer" style="color:var(--a);text-decoration:none;margin-left:6px">Get key →</a>
     <span style="margin-left:8px;color:var(--w);font-size:11px">⚠ In claude.ai leave blank (auto-proxied)</span>
   </div>
-  <input class="field" type="password" id="api-inp" placeholder="sk-ant-api03-…" style="padding:7px 12px;font-size:12.5px;width:280px;flex-shrink:0"/>
-  <button class="btn" onclick="document.getElementById('api-inp').value=''">Clear</button>
-  <button class="btn ok" onclick="toggleKey()">Done ✓</button>
+  <input class="field" type="password" id="api-inp" placeholder="sk-ant-api03-…" style="padding:7px 12px;font-size:12.5px;width:280px;flex-shrink:0"
+    oninput="document.getElementById('test-result').textContent=''"/>
+  <button class="btn" id="test-btn" onclick="testKey()">&#129514; Test</button>
+  <button class="btn" onclick="document.getElementById('api-inp').value='';document.getElementById('test-result').textContent=''">Clear</button>
+  <button class="btn ok" onclick="toggleKey()">Done &#10003;</button>
+  <span id="test-result" style="font-size:12px;font-weight:600"></span>
 </div>
 
 <!-- ═══════════════ INPUT SCREEN ═══════════════ -->
@@ -593,6 +596,40 @@ function toggleKey(){
   if(hasKey)$('key-btn').classList.add('ok');else $('key-btn').classList.remove('ok');
 }
 
+// ── TEST API KEY ─────────────────────────────────────────────────
+async function testKey(){
+  const key=document.getElementById('api-inp').value.trim();
+  const tr=document.getElementById('test-result');
+  const tb=document.getElementById('test-btn');
+  if(!key){tr.textContent='Enter a key first';tr.style.color='var(--w)';return;}
+  tb.disabled=true;tb.textContent='Testing…';tr.textContent='';
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'anthropic-version':'2023-06-01',
+        'x-api-key':key,
+        'anthropic-dangerous-direct-browser-access':'true',
+      },
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:10,
+        messages:[{role:'user',content:'Say OK'}]})
+    });
+    const d=await r.json();
+    if(r.ok&&d.content){
+      tr.textContent='✅ Key works!';tr.style.color='var(--a3)';
+      document.getElementById('key-lbl').textContent='Key ✓';
+      document.getElementById('key-btn').style.borderColor='rgba(16,185,129,.4)';
+      document.getElementById('key-btn').style.color='var(--a3)';
+    } else {
+      tr.textContent='❌ '+(d?.error?.message||'HTTP '+r.status);tr.style.color='var(--d)';
+    }
+  } catch(e){
+    tr.textContent='❌ Network error — check connection';tr.style.color='var(--d)';
+  }
+  tb.disabled=false;tb.textContent='🧪 Test';
+}
+
 // ── FILE HANDLING ────────────────────────────────────────────────
 function handleDrop(e){
   e.preventDefault();
@@ -655,15 +692,40 @@ function setFileBadge(txt){
 // ── CLAUDE API ───────────────────────────────────────────────────
 async function claude(system,user,maxTokens=5000){
   const key=$('api-inp').value.trim();
-  const hdrs={'Content-Type':'application/json','anthropic-version':'2023-06-01'};
-  if(key){hdrs['x-api-key']=key;hdrs['anthropic-dangerous-direct-browser-access']='true';}
-  const r=await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',headers:hdrs,
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens,system,
-      messages:[{role:'user',content:user}]})
-  });
-  const d=await r.json();
-  if(d.error)throw new Error(d.error.message||`API error ${r.status}`);
+  if(!key){
+    // auto-open key panel so user knows what to do
+    $('key-panel').classList.add('open');
+    throw new Error('Please enter your Anthropic API key first — click the 🔑 API Key button at the top.');
+  }
+  const hdrs={
+    'Content-Type':'application/json',
+    'anthropic-version':'2023-06-01',
+    'x-api-key':key,
+    'anthropic-dangerous-direct-browser-access':'true',
+  };
+  let r;
+  try{
+    r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:hdrs,
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:maxTokens,system,
+        messages:[{role:'user',content:user}]
+      })
+    });
+  } catch(netErr){
+    throw new Error('Network error — could not reach api.anthropic.com. Check your internet connection and that pop-up/ad blockers are not blocking the request. ('+netErr.message+')');
+  }
+  let d;
+  try{d=await r.json();}
+  catch{throw new Error(`API returned non-JSON response (HTTP ${r.status}). The key may be invalid.`);}
+  if(!r.ok||d.error){
+    const msg=d?.error?.message||`HTTP ${r.status}`;
+    if(r.status===401)throw new Error('Invalid API key — double-check it at console.anthropic.com');
+    if(r.status===429)throw new Error('Rate limited — wait a moment then try again');
+    if(r.status===400)throw new Error('Bad request: '+msg);
+    throw new Error('API error: '+msg);
+  }
   return d.content?.[0]?.text??'';
 }
 
