@@ -9,144 +9,103 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-:root{
-  --bg:#060A12;--card:#0C1422;--card2:#111B2D;--bd:#1A2B40;
-  --a:#00D4FF;--a2:#7C3AED;--a3:#10B981;--w:#F59E0B;--d:#EF4444;
-  --tx:#E2EBF6;--mu:#4A6585;--su:#1E3050;
-}
+:root{--bg:#060A12;--card:#0C1422;--bd:#1A2B40;--a:#00D4FF;--a2:#7C3AED;--a3:#10B981;--w:#F59E0B;--d:#EF4444;--tx:#E2EBF6;--mu:#4A6585;--su:#1E3050;}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--tx);min-height:100vh;overflow-x:hidden}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--bd);border-radius:4px}
-@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:4px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-@keyframes glow{0%,100%{box-shadow:0 0 6px #00D4FF44}50%{box-shadow:0 0 20px #00D4FF88}}
-.au {animation:fadeUp .4s ease both}
-.au1{animation:fadeUp .4s ease .07s both}
-.au2{animation:fadeUp .4s ease .14s both}
-.au3{animation:fadeUp .4s ease .21s both}
-.spin{animation:spin .85s linear infinite}
+.au{animation:fadeUp .38s ease both}.au1{animation:fadeUp .38s .07s ease both}.au2{animation:fadeUp .38s .14s ease both}.au3{animation:fadeUp .38s .21s ease both}
 .pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--a);display:inline-block;animation:pulse 1.6s ease infinite}
-/* Cards */
 .card{background:var(--card);border:1px solid var(--bd);border-radius:12px}
 .glass{background:rgba(255,255,255,.025);border:1px solid var(--bd);border-radius:11px;backdrop-filter:blur(14px)}
-/* Badges */
 .badge{display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:100px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
-/* Buttons */
 .btn{background:rgba(255,255,255,.03);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer;padding:7px 14px;display:inline-flex;align-items:center;gap:6px;transition:.14s;white-space:nowrap}
-.btn:hover{border-color:var(--su);background:rgba(255,255,255,.06)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.btn.ok{border-color:rgba(16,185,129,.4);color:var(--a3)}
-.btn.primary{background:linear-gradient(135deg,var(--a),var(--a2));border:none;color:#fff;font-weight:700;font-size:16px;padding:17px;border-radius:12px;width:100%;justify-content:center;box-shadow:0 0 30px rgba(0,212,255,.2)}
-.btn.primary:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px)}
-.btn.primary:disabled{filter:none;transform:none;background:#1A2B40;box-shadow:none}
-/* Chips */
+.btn:hover{border-color:rgba(0,212,255,.3);background:rgba(255,255,255,.06)}.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--a),var(--a2));border:none;color:#fff;font-weight:700;font-size:15px;padding:16px;border-radius:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;box-shadow:0 0 28px rgba(0,212,255,.2);transition:.18s}
+.btn-primary:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-1px)}
+.btn-primary:disabled{background:#1A2B40;box-shadow:none;transform:none;cursor:not-allowed;opacity:.6}
 .chip{padding:5px 12px;border-radius:100px;border:1px solid var(--bd);font-size:11px;font-weight:500;cursor:pointer;background:transparent;font-family:inherit;color:var(--mu);transition:.13s}
-.chip:hover{color:var(--tx);border-color:var(--su)}
-.chip.on{background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.4);color:var(--a)}
-/* Tabs */
+.chip:hover{color:var(--tx);border-color:var(--su)}.chip.on{background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.4);color:var(--a)}
 .tab{padding:7px 16px;background:transparent;border:1px solid transparent;border-bottom:none;border-radius:7px 7px 0 0;color:var(--mu);font-size:13px;cursor:pointer;transition:.13s;font-family:inherit}
-.tab:hover{color:var(--tx)}
-.tab.on{background:rgba(0,212,255,.09);border-color:rgba(0,212,255,.35);color:var(--a);font-weight:600}
-/* Ctype (small toggle) */
+.tab:hover{color:var(--tx)}.tab.on{background:rgba(0,212,255,.09);border-color:rgba(0,212,255,.35);color:var(--a);font-weight:600}
 .ctype{padding:4px 9px;border-radius:5px;border:1px solid var(--bd);background:transparent;color:var(--mu);font-family:inherit;font-size:10px;cursor:pointer;transition:.12s}
-.ctype.on{border-color:rgba(0,212,255,.45);color:var(--a);background:rgba(0,212,255,.09)}
-.ctype:hover:not(.on){color:var(--tx)}
-/* Slider */
+.ctype.on{border-color:rgba(0,212,255,.45);color:var(--a);background:rgba(0,212,255,.09)}.ctype:hover:not(.on){color:var(--tx)}
 .slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:var(--bd);outline:none;cursor:pointer}
 .slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--a);cursor:pointer;border:2.5px solid var(--bg);box-shadow:0 0 0 2px rgba(0,212,255,.35)}
-/* Fields */
 .field{background:var(--card);border:1px solid var(--bd);border-radius:9px;color:var(--tx);font-family:inherit;outline:none;transition:border-color .15s;width:100%}
-.field:focus{border-color:rgba(0,212,255,.5)}
-.field::placeholder{color:var(--mu)}
-/* Mono */
+.field:focus{border-color:rgba(0,212,255,.5)}.field::placeholder{color:var(--mu)}
 .mono{font-family:'JetBrains Mono',monospace}
-/* Tables */
 table{border-collapse:collapse;width:100%}
 th{text-align:left;font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;font-weight:700;padding:7px 12px;white-space:nowrap;background:var(--card)}
-td{padding:8px 12px;font-size:12.5px;border-top:1px solid rgba(26,43,64,.5)}
-tr:hover td{background:rgba(255,255,255,.015)}
-
-/* ── HEADER ── */
-#hdr{height:60px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:200;background:rgba(6,10,18,.92);backdrop-filter:blur(14px)}
-#hdr-logo{display:flex;align-items:center;gap:10px}
+td{padding:8px 12px;font-size:12.5px;border-top:1px solid rgba(26,43,64,.5)}tr:hover td{background:rgba(255,255,255,.015)}
+/* HEADER */
+#hdr{height:60px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:200;background:rgba(6,10,18,.93);backdrop-filter:blur(14px)}
 #hdr-icon{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--a),var(--a2));display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
-#hdr-name{font-weight:800;font-size:15px;letter-spacing:-.01em}
-#hdr-sub{font-size:9px;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin-top:-2px}
 #hdr-right{display:flex;align-items:center;gap:8px}
-
-/* ── KEY PANEL ── */
-#key-panel{background:var(--card);border-bottom:1px solid var(--bd);padding:12px 24px;display:none;align-items:center;gap:12px;flex-wrap:wrap}
+/* KEY PANEL */
+#key-panel{background:var(--card);border-bottom:1px solid var(--bd);padding:12px 24px;display:none;align-items:center;gap:10px;flex-wrap:wrap}
 #key-panel.open{display:flex}
-
-/* ── SCREENS ── */
-.scr{display:none}
-.scr.on{display:block}
-
-/* ── INPUT SCREEN ── */
-#input-wrap{max-width:860px;margin:0 auto;padding:52px 20px}
-#hero{text-align:center;margin-bottom:48px}
-#hero-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:100px;border:1px solid rgba(0,212,255,.28);background:rgba(0,212,255,.07);margin-bottom:16px}
-#hero h1{font-size:44px;font-weight:800;line-height:1.08;letter-spacing:-.04em;margin-bottom:16px}
+/* SCREENS */
+.scr{display:none}.scr.on{display:block}
+/* INPUT */
+#input-wrap{max-width:840px;margin:0 auto;padding:50px 20px}
+#hero h1{font-size:42px;font-weight:800;line-height:1.08;letter-spacing:-.04em;margin-bottom:14px}
 .grad{background:linear-gradient(135deg,var(--a),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-#hero p{color:var(--mu);font-size:15.5px;line-height:1.8;max-width:500px;margin:0 auto}
 .slbl{font-size:10.5px;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:9px}
-#dept-row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:28px}
-#dropzone{border:2px dashed var(--bd);border-radius:14px;padding:28px 22px;text-align:center;cursor:pointer;background:rgba(255,255,255,.01);transition:.2s;margin-bottom:12px}
+#dropzone{border:2px dashed var(--bd);border-radius:14px;padding:26px 22px;text-align:center;cursor:pointer;background:rgba(255,255,255,.01);transition:.2s;margin-bottom:12px}
 #dropzone:hover,#dropzone.over{border-color:var(--a);background:rgba(0,212,255,.05)}
-#dz-icon{font-size:36px;margin-bottom:10px}
-#dz-ttl{font-weight:700;font-size:15px;margin-bottom:4px}
-#dz-sub{color:var(--mu);font-size:12.5px}
-#file-ok{margin-top:12px;display:none;align-items:center;gap:8px;padding:7px 14px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);border-radius:8px;color:var(--a3);font-size:12.5px;font-weight:600}
+#file-ok{margin-top:10px;display:none;align-items:center;gap:8px;padding:7px 14px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);border-radius:8px;color:var(--a3);font-size:12.5px;font-weight:600}
 #file-ok.on{display:inline-flex}
-#paste{width:100%;min-height:110px;padding:13px 15px;border-radius:11px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.8;resize:vertical;outline:none;transition:border-color .18s}
+#paste{width:100%;min-height:100px;padding:13px 15px;border-radius:11px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.8;resize:vertical;outline:none;transition:border-color .18s}
 #paste:focus{border-color:rgba(0,212,255,.5)}
-#sample-row{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:10px 0 26px}
-#err{padding:11px 15px;border-radius:9px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:var(--d);margin-bottom:16px;font-size:13.5px;display:none}
+#err{padding:11px 15px;border-radius:9px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:var(--d);margin-bottom:14px;font-size:13px;display:none}
 #err.on{display:block}
-
-/* ── PROCESSING SCREEN ── */
-#proc{min-height:calc(100vh - 60px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px}
-#proc-ring{position:relative;width:90px;height:90px}
+/* DEMO PICKER */
+.demo-card{background:rgba(255,255,255,.025);border:1.5px solid var(--bd);border-radius:14px;padding:18px 20px;cursor:pointer;transition:all .18s;flex:1;min-width:180px;text-align:center}
+.demo-card:hover{border-color:rgba(0,212,255,.45);background:rgba(0,212,255,.05);transform:translateY(-2px)}
+.demo-card .d-ico{font-size:28px;margin-bottom:8px}
+.demo-card .d-ttl{font-weight:700;font-size:14px;margin-bottom:4px}
+.demo-card .d-sub{font-size:11.5px;color:var(--mu);line-height:1.5}
+/* PROCESSING */
+#proc{min-height:calc(100vh - 60px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px}
+#proc-ring{position:relative;width:88px;height:88px}
 #proc-ring .rr1{position:absolute;inset:0;border-radius:50%;border:2.5px solid var(--bd)}
 #proc-ring .rr2{position:absolute;inset:0;border-radius:50%;border:2.5px solid transparent;border-top-color:var(--a);animation:spin .85s linear infinite}
 #proc-ring .rr3{position:absolute;inset:10px;border-radius:50%;border:2px solid transparent;border-top-color:var(--a2);animation:spin .65s linear infinite reverse}
-#proc-ring .rri{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px}
-#proc-title{font-size:22px;font-weight:800;text-align:center;letter-spacing:-.02em}
-#proc-step{font-family:'JetBrains Mono',monospace;color:var(--a);font-size:13px;text-align:center;margin-top:7px}
+#proc-ring .rri{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:27px}
+#proc-title{font-size:21px;font-weight:800;text-align:center;letter-spacing:-.02em}
+#proc-step{font-family:'JetBrains Mono',monospace;color:var(--a);font-size:12.5px;text-align:center;margin-top:7px}
 #proc-bar-bg{width:300px;background:var(--bd);border-radius:100px;height:5px;overflow:hidden}
 #proc-bar{height:100%;background:linear-gradient(90deg,var(--a),var(--a2));width:0%;transition:width .75s ease;border-radius:100px}
-
-/* ── DASHBOARD ── */
+/* DASHBOARD */
 #dash-wrap{max-width:1380px;margin:0 auto;padding:22px 16px}
 #dash-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:12px}
-#dash-meta h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin:5px 0 3px}
-#dash-meta .dsub{color:var(--mu);font-size:12px}
-#dash-badges{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px}
-#dash-exp{display:flex;gap:7px;flex-wrap:wrap}
-#tab-bar{display:flex;gap:3px;border-bottom:1px solid var(--bd);margin-bottom:22px}
-.tpanel{display:none}
-.tpanel.on{display:block}
-
-/* ── OVERVIEW ── */
+.dsub{color:var(--mu);font-size:12px}
+#tab-bar{display:flex;gap:3px;border-bottom:1px solid var(--bd);margin-bottom:22px;flex-wrap:wrap}
+.tpanel{display:none}.tpanel.on{display:block}
+/* OVERVIEW */
 #summary-bar{padding:13px 20px;margin-bottom:18px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 #ctrl-card{padding:14px 18px;margin-bottom:16px}
 #ctrl-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-#kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:20px}
+#kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px;margin-bottom:20px}
 .kpi-c{position:relative;overflow:hidden;background:var(--card);border:1.5px solid var(--bd);border-radius:12px;padding:16px 18px;cursor:pointer;transition:all .2s}
 .kpi-c:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,212,255,.07)}
 .kpi-c.sel{border-color:var(--a);box-shadow:0 0 0 1px rgba(0,212,255,.3)}
 .kpi-bar{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(0,0,0,.2)}
 .kpi-fill{height:100%;transition:width .7s ease;border-radius:0 2px 0 0}
 .kpi-lbl{font-size:9.5px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:7px}
-.kpi-val{font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:800;margin-bottom:4px}
+.kpi-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;margin-bottom:4px}
 .kpi-chg{font-size:11.5px;font-weight:600}
 .up{color:var(--a3)}.down{color:var(--d)}.stable{color:var(--mu)}
 #prev-charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-
-/* ── VIZ TAB ── */
+/* LOCKED PANEL (demo upgrade) */
+.locked-panel{position:relative;border-radius:12px;overflow:hidden}
+.lock-overlay{position:absolute;inset:0;background:rgba(6,10,18,.88);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10;border-radius:12px;border:1.5px dashed rgba(124,58,237,.45)}
+.lock-overlay h3{font-size:17px;font-weight:800;color:var(--tx)}
+.lock-overlay p{font-size:13px;color:var(--mu);max-width:300px;text-align:center;line-height:1.6}
+/* VIZ */
 #viz-wrap{display:grid;grid-template-columns:210px 1fr;gap:16px;min-height:600px}
 #viz-panel{padding:14px 12px;position:sticky;top:72px;height:fit-content}
 .vcat-lbl{font-size:9px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin:10px 0 6px}
@@ -154,45 +113,32 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .vbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px;border-radius:8px;border:1px solid var(--bd);background:transparent;cursor:pointer;transition:.14s;color:var(--mu);font-family:inherit}
 .vbtn:hover{border-color:rgba(0,212,255,.35);color:var(--tx);background:rgba(0,212,255,.06)}
 .vbtn.on{border-color:rgba(0,212,255,.55);color:var(--a);background:rgba(0,212,255,.1)}
-.vbtn-ico{font-size:12px;font-family:'JetBrains Mono',monospace}
-.vbtn-lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.vbtn-ico{font-size:12px;font-family:'JetBrains Mono',monospace}.vbtn-lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
 #chart-sel-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 #main-chart-card{padding:22px;margin-bottom:16px}
-#mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px}
-.mini-c{padding:16px;cursor:pointer;transition:border-color .15s}
-.mini-c:hover{border-color:rgba(0,212,255,.35)}
-.mini-c.on{border-color:rgba(0,212,255,.55)}
-
-/* ── INSIGHTS ── */
+#mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:12px}
+.mini-c{padding:16px;cursor:pointer;transition:border-color .15s}.mini-c:hover{border-color:rgba(0,212,255,.35)}.mini-c.on{border-color:rgba(0,212,255,.55)}
+/* INSIGHTS */
 #ins-wrap{display:grid;grid-template-columns:3fr 2fr;gap:18px}
 .ins-c{display:flex;gap:12px;padding:12px 15px;margin-bottom:10px;border-radius:0 12px 12px 0;border:1px solid var(--bd);border-left-width:3px;background:var(--card)}
-.ins-ico{font-size:22px;flex-shrink:0}
-.ins-badge{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:2px 8px;border-radius:100px;display:inline-block;margin-bottom:5px}
-.ins-txt{font-size:13.5px;line-height:1.65}
+.ins-badge{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:2px 8px;border-radius:100px;display:inline-block;margin-bottom:5px}.ins-txt{font-size:13.5px;line-height:1.65}
 .rec-c{display:flex;gap:10px;padding:12px 14px;margin-bottom:10px;background:var(--card);border:1px solid rgba(0,212,255,.2);border-radius:12px}
 .rec-n{width:24px;height:24px;border-radius:50%;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.35);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--a);flex-shrink:0;margin-top:1px}
-#q-card{padding:18px;margin-top:18px}
-#q-bar-bg{height:6px;background:var(--bd);border-radius:100px;overflow:hidden;margin:10px 0 6px}
-#q-bar-fill{height:100%;background:linear-gradient(90deg,var(--a3),var(--a));border-radius:100px}
-
-/* ── BOARD REPORT ── */
+/* REPORT */
 #rep-wrap{max-width:820px;margin:0 auto}
 #exec-card{padding:34px;margin-bottom:20px}
-#exec-summary{font-size:15.5px;line-height:1.9;border-left:3px solid var(--a);padding-left:18px;margin-bottom:22px}
+#exec-summary{font-size:15px;line-height:1.9;border-left:3px solid var(--a);padding-left:18px;margin-bottom:22px}
 #exec-narr{font-size:14px;line-height:1.9;color:var(--mu)}
 #kpi-rep-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .kpi-rep{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:var(--card);border:1px solid var(--bd);border-radius:12px}
-
-/* ── DATA TAB ── */
+/* DATA */
 #kpi-tbl-wrap{padding:20px;margin-bottom:18px;overflow-x:auto}
 #cdata-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:18px}
-
-/* ── RESPONSIVE ── */
+/* UPGRADE STRIP */
+.upgrade-strip{background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(0,212,255,.08));border:1px solid rgba(124,58,237,.35);border-radius:12px;padding:20px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}
 @media(max-width:720px){
-  #hero h1{font-size:30px}
-  #prev-charts,#ctrl-grid,#ins-wrap,#kpi-rep-grid{grid-template-columns:1fr}
-  #viz-wrap{grid-template-columns:1fr}
-  #viz-panel{position:static}
+  #hero h1{font-size:28px}#prev-charts,#ctrl-grid,#ins-wrap,#kpi-rep-grid{grid-template-columns:1fr}
+  #viz-wrap{grid-template-columns:1fr}#viz-panel{position:static}
 }
 </style>
 </head>
@@ -200,122 +146,160 @@ tr:hover td{background:rgba(255,255,255,.015)}
 
 <!-- HEADER -->
 <div id="hdr">
-  <div id="hdr-logo">
+  <div style="display:flex;align-items:center;gap:10px">
     <div id="hdr-icon">⚡</div>
     <div>
-      <div id="hdr-name">NEXUS ERP</div>
-      <div id="hdr-sub">Power BI × AI Intelligence</div>
+      <div style="font-weight:800;font-size:15px;letter-spacing:-.01em">NEXUS ERP</div>
+      <div style="font-size:9px;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin-top:-2px">Power BI × AI Intelligence</div>
     </div>
   </div>
   <div id="hdr-right">
-    <span class="badge" style="background:rgba(0,212,255,.1);color:var(--a);border:1px solid rgba(0,212,255,.28)">
-      <span class="pulse-dot"></span>&nbsp;RAG ACTIVE
-    </span>
+    <span class="badge" style="background:rgba(0,212,255,.1);color:var(--a);border:1px solid rgba(0,212,255,.28)"><span class="pulse-dot"></span>&nbsp;LIVE</span>
     <button class="btn" id="key-btn" onclick="toggleKey()">🔑 <span id="key-lbl">API Key</span></button>
-    <button class="btn ok" id="new-btn" style="display:none" onclick="resetApp()">← New</button>
+    <button class="btn" id="new-btn" style="display:none" onclick="resetApp()">← New</button>
   </div>
 </div>
 
-<!-- API KEY PANEL -->
+<!-- KEY PANEL -->
 <div id="key-panel">
-  <div style="flex:1;font-size:12px;color:var(--mu);line-height:1.7;min-width:200px">
-    <b style="color:var(--tx)">GitHub Pages / Self-hosted:</b> Enter your Anthropic API key. Stays in memory only — never stored.
-    <a href="https://console.anthropic.com" target="_blank" rel="noreferrer" style="color:var(--a);text-decoration:none;margin-left:6px">Get key →</a>
-    <span style="margin-left:8px;color:var(--w);font-size:11px">⚠ In claude.ai leave blank (auto-proxied)</span>
+  <div style="flex:1;font-size:12px;color:var(--mu);line-height:1.65;min-width:220px">
+    <b style="color:var(--tx)">Anthropic API key</b> — stays in memory only, never stored or transmitted elsewhere.
+    <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" style="color:var(--a);text-decoration:none;margin-left:5px">Get free key →</a>
   </div>
-  <input class="field" type="password" id="api-inp" placeholder="sk-ant-api03-…" style="padding:7px 12px;font-size:12.5px;width:280px;flex-shrink:0"
-    oninput="document.getElementById('test-result').textContent=''"/>
-  <button class="btn" id="test-btn" onclick="testKey()">&#129514; Test</button>
-  <button class="btn" onclick="document.getElementById('api-inp').value='';document.getElementById('test-result').textContent=''">Clear</button>
-  <button class="btn ok" onclick="toggleKey()">Done &#10003;</button>
-  <span id="test-result" style="font-size:12px;font-weight:600"></span>
+  <input class="field" type="password" id="api-inp" placeholder="sk-ant-api03-…"
+    style="padding:7px 12px;font-size:12.5px;width:265px;flex-shrink:0"
+    oninput="document.getElementById('test-res').textContent=''"/>
+  <button class="btn" id="test-btn" onclick="testKey()">🧪 Test</button>
+  <button class="btn" onclick="document.getElementById('api-inp').value='';document.getElementById('test-res').textContent=''">Clear</button>
+  <button class="btn" style="border-color:rgba(16,185,129,.4);color:var(--a3)" onclick="toggleKey()">Done ✓</button>
+  <span id="test-res" style="font-size:12px;font-weight:600"></span>
 </div>
 
-<!-- ═══════════════ INPUT SCREEN ═══════════════ -->
+<!-- ══ INPUT SCREEN ══ -->
 <div class="scr on" id="scr-input">
 <div id="input-wrap">
-  <div id="hero" class="au">
-    <div id="hero-pill"><span class="pulse-dot"></span>&nbsp;<span style="font-size:11px;color:var(--a);font-weight:700;letter-spacing:.08em">AI RAG ENGINE ACTIVE</span></div>
+
+  <div id="hero" class="au" style="text-align:center;margin-bottom:44px">
+    <div style="display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:100px;border:1px solid rgba(0,212,255,.28);background:rgba(0,212,255,.07);margin-bottom:14px">
+      <span class="pulse-dot"></span>
+      <span style="font-size:11px;color:var(--a);font-weight:700;letter-spacing:.08em">AI RAG PIPELINE</span>
+    </div>
     <h1>Any Data →<br><span class="grad">Board-Ready Insight</span></h1>
-    <p>Upload Excel, CSV, or PDF — or paste raw data. AI auto-detects structure, extracts KPIs, and builds 30+ interactive visualizations with exports.</p>
+    <p style="color:var(--mu);font-size:15px;line-height:1.8;max-width:500px;margin:0 auto">Upload Excel, CSV, or PDF — or paste raw numbers. AI extracts KPIs and builds 30+ interactive Power BI-style charts.</p>
   </div>
 
-  <div class="slbl au1">Department <span style="color:var(--bd);font-weight:400">· optional, AI auto-detects</span></div>
-  <div id="dept-row"></div>
-
-  <div id="dropzone"
-    onclick="document.getElementById('finput').click()"
-    ondragover="event.preventDefault();this.classList.add('over')"
-    ondragleave="this.classList.remove('over')"
-    ondrop="handleDrop(event)">
-    <input type="file" id="finput" accept=".csv,.tsv,.txt,.xls,.xlsx,.pdf" style="display:none" onchange="handleFileInput(event)"/>
-    <div id="dz-icon">📂</div>
-    <div id="dz-ttl">Drop any file or click to browse</div>
-    <div id="dz-sub">Supports .xlsx .xls .csv .tsv .txt <b style="color:var(--a2)">.pdf</b> — multi-sheet workbooks fully supported</div>
-    <div id="file-ok">✅&nbsp;<span id="file-ok-txt"></span></div>
+  <!-- SECTION 1: TRY FREE (no key) -->
+  <div class="card au1" style="padding:24px;margin-bottom:28px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <div style="font-size:20px">🚀</div>
+      <div>
+        <div style="font-weight:800;font-size:15px">Try Free — No API Key Needed</div>
+        <div style="font-size:12px;color:var(--mu);margin-top:2px">See a live dashboard in seconds. Pick a department:</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div class="demo-card" onclick="genDemo('sales')">
+        <div class="d-ico">📈</div>
+        <div class="d-ttl">Sales</div>
+        <div class="d-sub">Revenue, targets &amp; units — 12-month view</div>
+      </div>
+      <div class="demo-card" onclick="genDemo('hr')">
+        <div class="d-ico">👥</div>
+        <div class="d-ttl">HR &amp; People</div>
+        <div class="d-sub">Headcount, attrition &amp; engagement data</div>
+      </div>
+      <div class="demo-card" onclick="genDemo('finance')">
+        <div class="d-ico">💰</div>
+        <div class="d-ttl">Finance P&amp;L</div>
+        <div class="d-sub">Revenue, EBITDA &amp; margin analysis</div>
+      </div>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bd);font-size:11.5px;color:var(--mu)">
+      ✨ Demo shows <b style="color:var(--tx)">Overview tab</b> — add your API key above to unlock <b style="color:var(--a)">all 5 tabs, 13 chart types, Power BI controls &amp; exports</b>
+    </div>
   </div>
 
-  <div class="slbl au2" style="margin-bottom:7px">Or paste data / raw text</div>
-  <textarea id="paste" class="field au2" placeholder="Paste CSV rows, numbers, or a plain text description:
+  <!-- SECTION 2: API mode (full) -->
+  <div class="card au2" style="padding:24px;margin-bottom:20px;border-color:rgba(0,212,255,.2)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <div style="font-size:20px">⚡</div>
+      <div>
+        <div style="font-weight:800;font-size:15px">Full AI Dashboard — Your Own Data</div>
+        <div style="font-size:12px;color:var(--mu);margin-top:2px">Requires API key · Upload any file or paste data to generate a complete Power BI report</div>
+      </div>
+      <button class="btn" style="margin-left:auto;border-color:rgba(0,212,255,.4);color:var(--a);font-weight:600" onclick="toggleKey();setTimeout(()=>document.getElementById('api-inp').focus(),100)">🔑 Add API Key</button>
+    </div>
+    <div class="slbl">Department <span style="color:var(--bd);font-weight:400;text-transform:none">· optional</span></div>
+    <div id="dept-row" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px"></div>
+    <div id="dropzone"
+      onclick="document.getElementById('finput').click()"
+      ondragover="event.preventDefault();this.classList.add('over')"
+      ondragleave="this.classList.remove('over')"
+      ondrop="handleDrop(event)">
+      <input type="file" id="finput" accept=".csv,.tsv,.txt,.xls,.xlsx,.pdf" style="display:none" onchange="handleFileInput(event)"/>
+      <div style="font-size:32px;margin-bottom:8px">📂</div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px">Drop any file or click to browse</div>
+      <div style="color:var(--mu);font-size:12.5px">.xlsx .xls .csv .tsv .txt · PDF · multi-sheet workbooks</div>
+      <div id="file-ok">✅&nbsp;<span id="file-ok-txt"></span></div>
+    </div>
+    <div class="slbl" style="margin-bottom:7px">Or paste data / raw text</div>
+    <textarea id="paste" class="field" rows="4" placeholder="Paste CSV, numbers, or plain-text — e.g. &quot;Q1 Revenue $2.3M (+12%), Q2 $2.8M (+22%)…&quot;"></textarea>
+    <div id="sample-row" style="display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:10px 0 18px"><span style="font-size:11.5px;color:var(--mu)">Quick samples:</span></div>
+    <div id="err"></div>
+    <button class="btn-primary" id="gen-btn" onclick="generate()" disabled>⚡ Generate Full AI Dashboard</button>
+  </div>
 
-&quot;Q1 $2.3M revenue (+12%), Q2 $2.8M (+22%), top product Widget A 40% share...&quot;
+  <p style="text-align:center;color:var(--mu);font-size:11.5px;margin-top:8px">30+ chart types · Sliders &amp; filters · Export Excel / PDF / PowerPoint</p>
 
-Or upload a file above — preview appears here automatically."></textarea>
-
-  <div id="sample-row"><span style="font-size:11.5px;color:var(--mu)">Quick samples:</span></div>
-
-  <div id="err"></div>
-
-  <button class="btn primary au3" id="gen-btn" onclick="generate()" disabled>⚡ Generate Power BI Dashboard</button>
-  <p style="text-align:center;margin-top:12px;color:var(--mu);font-size:12px">30+ chart types · Interactive controls · Export Excel / PDF / PowerPoint</p>
 </div>
 </div>
 
-<!-- ═══════════════ PROCESSING SCREEN ═══════════════ -->
+<!-- ══ PROCESSING ══ -->
 <div class="scr" id="scr-proc">
 <div id="proc">
-  <div id="proc-ring">
-    <div class="rr1"></div><div class="rr2"></div><div class="rr3"></div>
-    <div class="rri">⚡</div>
-  </div>
-  <div>
-    <div id="proc-title">Processing Data</div>
-    <div id="proc-step">Initialising…</div>
-  </div>
+  <div id="proc-ring"><div class="rr1"></div><div class="rr2"></div><div class="rr3"></div><div class="rri">⚡</div></div>
+  <div><div id="proc-title">Analysing Data</div><div id="proc-step">Initialising…</div></div>
   <div id="proc-bar-bg"><div id="proc-bar"></div></div>
-  <div style="color:var(--mu);font-size:13px;max-width:360px;text-align:center;line-height:1.75">
-    RAG pipeline: ingesting → detecting structure → extracting KPIs → synthesizing charts → generating board report
-  </div>
+  <div style="color:var(--mu);font-size:13px;max-width:340px;text-align:center;line-height:1.75">RAG pipeline: ingesting → structure detection → KPI extraction → chart synthesis → board report</div>
 </div>
 </div>
 
-<!-- ═══════════════ DASHBOARD SCREEN ═══════════════ -->
+<!-- ══ DASHBOARD ══ -->
 <div class="scr" id="scr-dash">
 <div id="dash-wrap">
 
+  <!-- DEMO UPGRADE STRIP (shown only in demo mode) -->
+  <div id="demo-strip" style="display:none" class="upgrade-strip au">
+    <div style="font-size:28px">🔓</div>
+    <div style="flex:1">
+      <div style="font-weight:800;font-size:15px;margin-bottom:3px">You're viewing the Free Demo</div>
+      <div style="font-size:12.5px;color:var(--mu)">Showing <b style="color:var(--tx)">Overview only</b> with sample data. Add your API key to unlock <b style="color:var(--a)">all 5 tabs, 13 chart types, Power BI viz switcher, AI insights, board report &amp; exports</b> with your own data.</div>
+    </div>
+    <button class="btn" style="border-color:rgba(0,212,255,.5);color:var(--a);font-weight:700;padding:10px 20px;font-size:13px" onclick="toggleKey();setTimeout(()=>document.getElementById('api-inp').focus(),100)">🔑 Add API Key — Free</button>
+  </div>
+
   <div id="dash-hdr" class="au">
-    <div id="dash-meta">
-      <div id="dash-badges"></div>
-      <h1 id="dash-title">—</h1>
+    <div>
+      <div id="dash-badges" style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px"></div>
+      <h1 id="dash-title" style="font-size:23px;font-weight:800;letter-spacing:-.02em;margin:4px 0 3px">—</h1>
       <div class="dsub" id="dash-period"></div>
     </div>
-    <div id="dash-exp">
+    <div id="dash-exp" style="display:flex;gap:7px;flex-wrap:wrap">
       <button class="btn" id="exp-xl"  onclick="doExport('xlsx')">📊 Excel</button>
       <button class="btn" id="exp-pdf" onclick="doExport('pdf')">📄 PDF</button>
       <button class="btn" id="exp-ppt" onclick="doExport('pptx')">📑 PPTX</button>
     </div>
   </div>
 
-  <!-- TABS -->
   <div id="tab-bar">
-    <button class="tab on"  data-p="overview">Overview</button>
-    <button class="tab"     data-p="viz">Visualizations</button>
-    <button class="tab"     data-p="insights">Insights</button>
-    <button class="tab"     data-p="report">Board Report</button>
-    <button class="tab"     data-p="data">Raw Data</button>
+    <button class="tab on" data-p="overview">Overview</button>
+    <button class="tab"    data-p="viz"     id="tab-viz">Visualizations</button>
+    <button class="tab"    data-p="insights" id="tab-ins">Insights</button>
+    <button class="tab"    data-p="report"  id="tab-rep">Board Report</button>
+    <button class="tab"    data-p="data"    id="tab-data">Raw Data</button>
   </div>
 
-  <!-- OVERVIEW PANEL -->
+  <!-- OVERVIEW TAB (available in both demo + full) -->
   <div class="tpanel on" id="p-overview">
     <div class="glass au" id="summary-bar">
       <div id="sum-txt" style="flex:1;font-size:14px;line-height:1.8"></div>
@@ -326,7 +310,8 @@ Or upload a file above — preview appears here automatically."></textarea>
       </div>
     </div>
 
-    <div class="card au1" id="ctrl-card">
+    <!-- Controls: full mode only -->
+    <div class="card au1" id="ctrl-card" style="display:none;padding:14px 18px;margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
         <span style="font-weight:700;font-size:13px">⚙️ Controls</span>
         <div style="display:flex;gap:6px">
@@ -341,12 +326,10 @@ Or upload a file above — preview appears here automatically."></textarea>
             <span class="mono" style="font-size:11px;color:var(--a)" id="thr-val">0</span>
           </div>
           <input type="range" class="slider" id="thr-sl" min="0" max="100" value="0" oninput="onThresh(this.value)"/>
-          <div style="display:flex;justify-content:space-between;font-size:9.5px;color:var(--mu);margin-top:3px">
-            <span>0</span><span id="thr-max">100</span>
-          </div>
+          <div style="display:flex;justify-content:space-between;font-size:9.5px;color:var(--mu);margin-top:3px"><span>0</span><span id="thr-max">100</span></div>
         </div>
         <div>
-          <div style="font-size:11px;color:var(--mu);margin-bottom:7px">Click a KPI card to highlight it</div>
+          <div style="font-size:11px;color:var(--mu);margin-bottom:7px">Click a KPI card to highlight</div>
           <div id="kpi-chips" style="display:flex;flex-wrap:wrap;gap:5px"></div>
         </div>
       </div>
@@ -354,9 +337,25 @@ Or upload a file above — preview appears here automatically."></textarea>
 
     <div id="kpi-grid"></div>
     <div id="prev-charts"></div>
+
+    <!-- Demo upgrade teaser below the 2 charts -->
+    <div id="demo-teaser" style="display:none;margin-top:22px">
+      <div class="upgrade-strip">
+        <div style="font-size:24px">🔒</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px">3 more tabs unlocked with API key</div>
+          <div style="font-size:12px;color:var(--mu)">
+            <b style="color:#a78bfa">Visualizations</b> — switch between 13 chart types, Power BI sidebar, data range slider<br>
+            <b style="color:var(--a3)">AI Insights</b> — auto-detected patterns, alerts &amp; ranked recommendations<br>
+            <b style="color:var(--w)">Board Report</b> — executive summary, CFO narrative &amp; KPI grid · Export Excel/PDF/PPTX
+          </div>
+        </div>
+        <button class="btn" style="border-color:rgba(0,212,255,.5);color:var(--a);font-weight:700;padding:10px 20px" onclick="toggleKey();setTimeout(()=>document.getElementById('api-inp').focus(),100)">🔑 Add Key Free →</button>
+      </div>
+    </div>
   </div>
 
-  <!-- VIZ PANEL -->
+  <!-- VIZ TAB (full mode only) -->
   <div class="tpanel" id="p-viz">
     <div id="viz-wrap">
       <div class="card" id="viz-panel">
@@ -370,10 +369,10 @@ Or upload a file above — preview appears here automatically."></textarea>
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:12px;flex-wrap:wrap">
             <div>
               <div id="mc-title" style="font-weight:700;font-size:16px;margin-bottom:3px"></div>
-              <div id="mc-sub"   style="font-size:12px;color:var(--mu)"></div>
+              <div id="mc-sub" style="font-size:12px;color:var(--mu)"></div>
               <div id="mc-badge" style="margin-top:6px;display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(0,212,255,.09);border:1px solid rgba(0,212,255,.28);border-radius:100px"></div>
             </div>
-            <div style="min-width:180px">
+            <div style="min-width:170px">
               <div style="display:flex;justify-content:space-between;margin-bottom:4px">
                 <span style="font-size:10.5px;color:var(--mu)">Data range</span>
                 <span class="mono" style="font-size:10.5px;color:var(--a)" id="range-pts">—</span>
@@ -389,7 +388,7 @@ Or upload a file above — preview appears here automatically."></textarea>
     </div>
   </div>
 
-  <!-- INSIGHTS PANEL -->
+  <!-- INSIGHTS TAB (full mode only) -->
   <div class="tpanel" id="p-insights">
     <div id="ins-wrap">
       <div>
@@ -403,10 +402,10 @@ Or upload a file above — preview appears here automatically."></textarea>
       <div>
         <div style="font-weight:800;font-size:17px;margin-bottom:16px">Recommendations</div>
         <div id="rec-list"></div>
-        <div class="card" id="q-card" style="display:none">
+        <div class="card" id="q-card" style="display:none;padding:18px;margin-top:18px">
           <div style="font-weight:700;margin-bottom:12px;font-size:14px">Data Quality</div>
           <div style="display:flex;align-items:center;gap:10px">
-            <div id="q-bar-bg" style="flex:1"><div id="q-bar-fill"></div></div>
+            <div style="flex:1;height:6px;background:var(--bd);border-radius:100px;overflow:hidden"><div id="q-bar-fill" style="height:100%;background:linear-gradient(90deg,var(--a3),var(--a));border-radius:100px"></div></div>
             <span style="font-weight:800;font-size:19px" id="q-score"></span>
           </div>
           <div style="font-size:12px;color:var(--mu);margin-top:4px" id="q-compl"></div>
@@ -416,7 +415,7 @@ Or upload a file above — preview appears here automatically."></textarea>
     </div>
   </div>
 
-  <!-- BOARD REPORT PANEL -->
+  <!-- REPORT TAB (full mode only) -->
   <div class="tpanel" id="p-report">
     <div id="rep-wrap">
       <div class="card au" id="exec-card">
@@ -424,7 +423,7 @@ Or upload a file above — preview appears here automatically."></textarea>
           <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--a),var(--a2));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏢</div>
           <div>
             <div style="font-weight:800;font-size:17px">Board Executive Summary</div>
-            <div style="font-size:12px;color:var(--mu)" id="exec-period"></div>
+            <div class="dsub" id="exec-period"></div>
           </div>
         </div>
         <div id="exec-summary"></div>
@@ -434,18 +433,13 @@ Or upload a file above — preview appears here automatically."></textarea>
     </div>
   </div>
 
-  <!-- DATA PANEL -->
+  <!-- DATA TAB (full mode only) -->
   <div class="tpanel" id="p-data">
     <input class="field" id="data-search" placeholder="🔍 Search KPIs…" oninput="filterKpiTbl(this.value)"
       style="padding:9px 14px;font-size:13px;margin-bottom:16px"/>
     <div class="card" id="kpi-tbl-wrap">
       <div style="font-weight:700;font-size:15px;margin-bottom:14px">KPI Data Table</div>
-      <div style="overflow-x:auto">
-        <table id="kpi-tbl">
-          <thead><tr><th>Metric</th><th>Value</th><th>Unit</th><th>Trend</th><th>Change</th></tr></thead>
-          <tbody id="kpi-tbody"></tbody>
-        </table>
-      </div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Metric</th><th>Value</th><th>Unit</th><th>Trend</th><th>Change</th></tr></thead><tbody id="kpi-tbody"></tbody></table></div>
     </div>
     <div id="cdata-grid"></div>
     <div id="src-sheets"></div>
@@ -456,17 +450,16 @@ Or upload a file above — preview appears here automatically."></textarea>
 
 <script>
 // ================================================================
-//  NEXUS ERP v2 — Pure Vanilla JS
-//  No React. No Babel. No build step.
-//  Just drop this index.html on GitHub Pages and go.
+//  NEXUS ERP v3.1 — Vanilla JS
+//  DEMO mode: Overview only (KPIs + 2 charts) — no API needed
+//  FULL mode: All 5 tabs, Power BI controls, exports — API required
 // ================================================================
 
-// ── Palette & constants ──────────────────────────────────────────
-const C=['#00D4FF','#7C3AED','#10B981','#F59E0B','#F97316','#EF4444','#06D6A0','#3B82F6','#EC4899','#14B8A6','#8B5CF6','#84CC16'];
+const PAL=['#00D4FF','#7C3AED','#10B981','#F59E0B','#F97316','#EF4444','#06D6A0','#3B82F6','#EC4899','#14B8A6','#8B5CF6','#84CC16'];
 const DEPTS=[
   {id:'sales',     label:'Sales',        icon:'📈',col:'#00D4FF'},
   {id:'hr',        label:'HR & People',  icon:'👥',col:'#7C3AED'},
-  {id:'operations',label:'Operations',   icon:'⚙️', col:'#10B981'},
+  {id:'operations',label:'Operations',   icon:'⚙️',col:'#10B981'},
   {id:'finance',   label:'Finance',      icon:'💰',col:'#F59E0B'},
   {id:'marketing', label:'Marketing',    icon:'📣',col:'#F97316'},
   {id:'supply',    label:'Supply Chain', icon:'🚚',col:'#06D6A0'},
@@ -474,906 +467,773 @@ const DEPTS=[
   {id:'executive', label:'Executive',    icon:'🏢',col:'#3B82F6'},
 ];
 const VCATS={
-  Comparison: ['bar','hbar','stacked','waterfall'],
+  Comparison:['bar','hbar','stacked','waterfall'],
   'Trend & Time':['line','area','combo'],
   'Part-to-Whole':['pie','donut','polarArea'],
   Distribution:['scatter','bubble'],
   Performance:['radar'],
 };
 const VMETA={
-  bar:{l:'Bar',i:'▌▌▌'},hbar:{l:'H-Bar',i:'═══'},stacked:{l:'Stacked',i:'▓▓▓'},
-  waterfall:{l:'Waterfall',i:'▁▃▅▇'},line:{l:'Line',i:'∿∿∿'},area:{l:'Area',i:'◣◣◣'},
-  combo:{l:'Combo',i:'▌∿▌'},pie:{l:'Pie',i:'◔◑◕'},donut:{l:'Donut',i:'◎◎◎'},
-  polarArea:{l:'Polar',i:'◉◉◉'},scatter:{l:'Scatter',i:'⠿⠿⠿'},bubble:{l:'Bubble',i:'○●◉'},
-  radar:{l:'Radar',i:'⬡⬡⬡'},
+  bar:{l:'Bar',i:'▌▌▌'},hbar:{l:'H-Bar',i:'═══'},stacked:{l:'Stacked',i:'▓▓▓'},waterfall:{l:'Waterfall',i:'▁▃▅▇'},
+  line:{l:'Line',i:'∿∿∿'},area:{l:'Area',i:'◣◣◣'},combo:{l:'Combo',i:'▌∿▌'},
+  pie:{l:'Pie',i:'◔◑◕'},donut:{l:'Donut',i:'◎◎◎'},polarArea:{l:'Polar',i:'◉◉◉'},
+  scatter:{l:'Scatter',i:'⠿⠿⠿'},bubble:{l:'Bubble',i:'○●◉'},radar:{l:'Radar',i:'⬡⬡⬡'},
 };
 const SAMPLES=[
-  {l:'Sales Q-Data',d:'sales',v:'Month,Revenue,Target,Units,Returns\nJan,245000,220000,1200,45\nFeb,289000,250000,1450,38\nMar,312000,280000,1580,52\nApr,278000,290000,1390,61\nMay,345000,310000,1720,44\nJun,398000,340000,1990,39\nJul,421000,380000,2100,55\nAug,387000,390000,1930,67\nSep,445000,410000,2220,42\nOct,478000,440000,2390,49\nNov,512000,480000,2560,53\nDec,589000,520000,2940,61'},
-  {l:'HR Analytics',d:'hr',v:'Dept,Salary,Performance,Satisfaction,TrainingHrs\nEngineering,95000,4.5,8,42\nSales,72000,3.8,6,18\nMarketing,68000,4.2,7,24\nHR,65000,4.0,9,30\nOperations,78000,3.5,5,12\nFinance,88000,4.7,8,36'},
-  {l:'Finance P&L',d:'finance',v:'Quarter,Revenue,COGS,GrossProfit,OpEx,EBITDA,NetIncome\nQ1-23,2340000,1120000,1220000,680000,540000,312000\nQ2-23,2780000,1290000,1490000,720000,770000,428000\nQ3-23,3120000,1450000,1670000,750000,920000,510000\nQ4-23,3450000,1580000,1870000,810000,1060000,598000\nQ1-24,2890000,1340000,1550000,700000,850000,465000\nQ2-24,3210000,1480000,1730000,760000,970000,541000'},
-  {l:'Operations',d:'operations',v:'Week,Efficiency,Downtime,Output,DefectRate,OEE\nW1,87,4.2,15200,1.2,84\nW2,91,2.8,16100,0.9,89\nW3,85,5.1,14800,1.5,82\nW4,93,1.9,16800,0.7,91\nW5,89,3.4,15600,1.1,87\nW6,94,1.5,17200,0.6,93\nW7,88,3.8,15900,1.0,86\nW8,96,1.2,17800,0.5,95'},
+  {l:'Sales Q-Data',d:'sales',v:'Month,Revenue,Target,Units\nJan,245000,220000,1200\nFeb,289000,250000,1450\nMar,312000,280000,1580\nApr,278000,290000,1390\nMay,345000,310000,1720\nJun,398000,340000,1990\nJul,421000,380000,2100\nAug,387000,390000,1930\nSep,445000,410000,2220\nOct,478000,440000,2390\nNov,512000,480000,2560\nDec,589000,520000,2940'},
+  {l:'HR Analytics',d:'hr',v:'Dept,Salary,Performance,Satisfaction\nEngineering,95000,4.5,8\nSales,72000,3.8,6\nMarketing,68000,4.2,7\nHR,65000,4.0,9\nOperations,78000,3.5,5\nFinance,88000,4.7,8'},
+  {l:'Finance P&L',d:'finance',v:'Quarter,Revenue,COGS,GrossProfit,EBITDA,NetIncome\nQ1-23,2340000,1120000,1220000,540000,312000\nQ2-23,2780000,1290000,1490000,770000,428000\nQ3-23,3120000,1450000,1670000,920000,510000\nQ4-23,3450000,1580000,1870000,1060000,598000\nQ1-24,2890000,1340000,1550000,850000,465000\nQ2-24,3210000,1480000,1730000,970000,541000'},
+  {l:'Operations KPIs',d:'operations',v:'Week,Efficiency,Output,DefectRate,OEE\nW1,87,15200,1.2,84\nW2,91,16100,0.9,89\nW3,85,14800,1.5,82\nW4,93,16800,0.7,91\nW5,89,15600,1.1,87\nW6,94,17200,0.6,93\nW7,88,15900,1.0,86\nW8,96,17800,0.5,95'},
 ];
 
-// ── App state ────────────────────────────────────────────────────
-const S={
-  dept:null, file:null, rawText:'',
-  dash:null, chartInst:{}, chartTypes:{},
-  tab:'overview', insFilter:'all',
-  pctBars:false, selKPI:null,
-  vizCat:'all', selIdx:0, range:100,
+// ── Demo datasets (hardcoded, no API needed) ──────────────────────
+const DEMOS = {
+  sales: {
+    department:'sales', isDemo:true,
+    title:'Annual Sales Performance 2024',
+    period:'Jan – Dec 2024',
+    summary:'Revenue grew 22% YoY reaching $4.70M, consistently beating quarterly targets. December peaked at $589K driven by holiday campaigns.',
+    executiveSummary:'FY2024 delivered $4.70M revenue, beating the $4.10M target by 14.6%. The team closed 23,450 units with December at 2,940 — the best month ever. Customer return rate held at 3.9%. Q4 momentum sets up strong 2025.',
+    narrative:'Revenue exceeded expectations in all four quarters, accelerating sharply in Q4. Month-over-month improvement from May onward reflects stronger pipeline conversion and pricing discipline.',
+    kpis:[
+      {label:'Total Revenue',   value:'$4.70M', unit:'$',     trend:'up',     change:'+22.4%'},
+      {label:'Annual Target',   value:'$4.10M', unit:'$',     trend:'up',     change:'+14.6% beat'},
+      {label:'Units Sold',      value:'23,450', unit:'units', trend:'up',     change:'+18.2%'},
+      {label:'Best Month',      value:'$589K',  unit:'$',     trend:'up',     change:'Dec 2024'},
+      {label:'Avg Monthly Rev', value:'$391K',  unit:'$',     trend:'up',     change:'+22.4%'},
+      {label:'Return Rate',     value:'3.9%',   unit:'%',     trend:'stable', change:'-0.2pp'},
+      {label:'Targets Hit',     value:'10/12',  unit:'months',trend:'up',     change:'+3 vs LY'},
+      {label:'Rev per Unit',    value:'$200.4', unit:'$',     trend:'up',     change:'+3.5%'},
+    ],
+    charts:[
+      {id:'c1',type:'area',title:'Monthly Revenue vs Target',subtitle:'12-month actual vs planned',
+        data:[{name:'Jan',value:245000,secondary:220000},{name:'Feb',value:289000,secondary:250000},{name:'Mar',value:312000,secondary:280000},{name:'Apr',value:278000,secondary:290000},{name:'May',value:345000,secondary:310000},{name:'Jun',value:398000,secondary:340000},{name:'Jul',value:421000,secondary:380000},{name:'Aug',value:387000,secondary:390000},{name:'Sep',value:445000,secondary:410000},{name:'Oct',value:478000,secondary:440000},{name:'Nov',value:512000,secondary:480000},{name:'Dec',value:589000,secondary:520000}]},
+      {id:'c2',type:'bar',title:'Monthly Units Sold',subtitle:'Volume per month',
+        data:[{name:'Jan',value:1200},{name:'Feb',value:1450},{name:'Mar',value:1580},{name:'Apr',value:1390},{name:'May',value:1720},{name:'Jun',value:1990},{name:'Jul',value:2100},{name:'Aug',value:1930},{name:'Sep',value:2220},{name:'Oct',value:2390},{name:'Nov',value:2560},{name:'Dec',value:2940}]},
+      {id:'c3',type:'pie',title:'Revenue by Quarter',subtitle:'',data:[{name:'Q1',value:846000},{name:'Q2',value:1021000},{name:'Q3',value:1253000},{name:'Q4',value:1579000}]},
+      {id:'c4',type:'radar',title:'Performance Scorecard',subtitle:'',data:[{name:'Revenue',value:92},{name:'Volume',value:87},{name:'Target Hit',value:83},{name:'Quality',value:96},{name:'Growth',value:78},{name:'Efficiency',value:89}]},
+      {id:'c5',type:'scatter',title:'Revenue vs Units',subtitle:'Monthly correlation',
+        data:[{name:'Jan',value:245000,secondary:1200},{name:'Feb',value:289000,secondary:1450},{name:'Mar',value:312000,secondary:1580},{name:'Apr',value:278000,secondary:1390},{name:'May',value:345000,secondary:1720},{name:'Jun',value:398000,secondary:1990},{name:'Jul',value:421000,secondary:2100},{name:'Aug',value:387000,secondary:1930},{name:'Sep',value:445000,secondary:2220},{name:'Oct',value:478000,secondary:2390},{name:'Nov',value:512000,secondary:2560},{name:'Dec',value:589000,secondary:2940}]},
+    ],
+    insights:[
+      {type:'positive',text:'Annual revenue $4.70M beat the $4.10M target by $600K (+14.6%). Best year on record.',icon:'🎯'},
+      {type:'positive',text:'H2 outperformed H1 by 52%: $2.83M vs $1.86M. Strong acceleration going into 2025.',icon:'📈'},
+      {type:'alert',  text:'April missed target ($278K vs $290K) — only miss of the year. Tied to Q2 campaign delays.',icon:'⚠️'},
+      {type:'positive',text:'December hit $589K — highest month ever, 34% above November target.',icon:'🏆'},
+      {type:'neutral', text:'Return rate stable at 3.9% with low variability — consistent product quality.',icon:'📦'},
+      {type:'positive',text:'Revenue per unit rose to $200.40 (+3.5%) — healthy pricing power.',icon:'💰'},
+      {type:'alert',  text:'August dipped $34K vs July — seasonal mid-summer slowdown pattern confirmed.',icon:'📊'},
+    ],
+    recommendations:[
+      'Replicate December bundle tactics in Q3 to reduce H2 skew.',
+      'Audit April campaign timing to prevent future target misses.',
+      'Set 2025 monthly targets at +15% vs 2024 actuals.',
+      'Launch return-reduction program targeting Apr and Aug.',
+      'Expand top H2 product lines to full-year availability.',
+    ],
+    dataQuality:{score:97,issues:[],completeness:'100%'},
+  },
+  hr: {
+    department:'hr', isDemo:true,
+    title:'HR & People Analytics Dashboard Q4 2024',
+    period:'Q4 2024',
+    summary:'Voluntary attrition improved to 9.2% (from 13.1% in Q3) and engagement scores reached 7.8/10 — the highest in 6 quarters.',
+    executiveSummary:'Q4 2024 people metrics show strong stabilisation. Attrition fell 3.9pp to 9.2%, saving ~$840K in replacement costs. Engagement at 7.8/10 is a 6-quarter high. Time-to-hire averaged 23 days, 4 days below industry benchmark. Engineering remains highest-compensated at $95K average with top performance scores.',
+    narrative:'The Q4 attrition improvement is the standout result, broad-based across departments. Engagement gains are led by HR and Finance, suggesting role clarity initiatives are working. Operations at 5/10 satisfaction remains the key risk to watch in Q1.',
+    kpis:[
+      {label:'Total Headcount', value:'342',      unit:'people', trend:'up',     change:'+18 QoQ'},
+      {label:'Attrition Rate',  value:'9.2%',     unit:'%',      trend:'up',     change:'-3.9pp vs Q3'},
+      {label:'Engagement Score',value:'7.8/10',   unit:'score',  trend:'up',     change:'+0.6 QoQ'},
+      {label:'Avg Salary',      value:'$78.5K',   unit:'$',      trend:'up',     change:'+4.2% YoY'},
+      {label:'Time to Hire',    value:'23 days',  unit:'days',   trend:'up',     change:'-4d vs benchmark'},
+      {label:'Training Hours',  value:'31 hrs',   unit:'hrs',    trend:'up',     change:'+7 hrs QoQ'},
+      {label:'Top Performers',  value:'24%',      unit:'%',      trend:'up',     change:'+3pp QoQ'},
+      {label:'Open Roles',      value:'14',       unit:'roles',  trend:'down',   change:'-6 vs Q3'},
+    ],
+    charts:[
+      {id:'c1',type:'hbar',title:'Avg Salary by Department',subtitle:'Q4 2024 compensation',
+        data:[{name:'Engineering',value:95000},{name:'Finance',value:88000},{name:'Operations',value:78000},{name:'Sales',value:72000},{name:'Marketing',value:68000},{name:'HR',value:65000}]},
+      {id:'c2',type:'bar',title:'Satisfaction Score by Dept',subtitle:'Out of 10',
+        data:[{name:'Engineering',value:8},{name:'Sales',value:6},{name:'Marketing',value:7},{name:'HR',value:9},{name:'Operations',value:5},{name:'Finance',value:8}]},
+      {id:'c3',type:'radar',title:'Department Scorecard',subtitle:'',
+        data:[{name:'Engineering',value:90},{name:'Sales',value:76},{name:'Marketing',value:84},{name:'HR',value:80},{name:'Operations',value:70},{name:'Finance',value:94}]},
+      {id:'c4',type:'donut',title:'Headcount by Department',subtitle:'Total 342 employees',
+        data:[{name:'Engineering',value:89},{name:'Sales',value:74},{name:'Operations',value:68},{name:'Marketing',value:45},{name:'Finance',value:38},{name:'HR',value:28}]},
+      {id:'c5',type:'scatter',title:'Salary vs Performance',subtitle:'By department',
+        data:[{name:'Engineering',value:95000,secondary:90},{name:'Finance',value:88000,secondary:94},{name:'Operations',value:78000,secondary:70},{name:'Sales',value:72000,secondary:76},{name:'Marketing',value:68000,secondary:84},{name:'HR',value:65000,secondary:80}]},
+    ],
+    insights:[
+      {type:'positive',text:'Attrition fell from 13.1% to 9.2% QoQ, saving an estimated $840K in replacement costs.',icon:'🎯'},
+      {type:'positive',text:'Engagement at 7.8/10 is the highest in 6 quarters, led by HR (9) and Finance (8).',icon:'📈'},
+      {type:'alert',  text:'Operations satisfaction is 5/10 — below the 6.5 threshold. Burnout risk flagged by pulse survey.',icon:'⚠️'},
+      {type:'positive',text:'Time-to-hire of 23 days is 4 days faster than the 27-day industry benchmark.',icon:'⏱️'},
+      {type:'neutral', text:'Engineering avg salary ($95K) is 45.8% above HR ($65K) — widest cross-dept spread in 3 years.',icon:'💰'},
+      {type:'alert',  text:'14 open roles at 4.1% vacancy rate — Engineering has 6 of those 14.',icon:'🔍'},
+    ],
+    recommendations:[
+      'Launch targeted Operations wellbeing program — 5/10 satisfaction is a retention risk.',
+      'Accelerate Engineering hiring: 6 open roles at 23-day TTH = 6 weeks of productivity loss.',
+      'Expand L&D programs — training hours correlate directly with retention improvement.',
+      'Review Sales compensation ($72K, 6/10 satisfaction) against current market benchmarks.',
+    ],
+    dataQuality:{score:92,issues:['Operations survey response rate 68% — below 80% target'],completeness:'96%'},
+  },
+  finance: {
+    department:'finance', isDemo:true,
+    title:'P&L Financial Performance H1 2024',
+    period:'Q1–Q2 2024',
+    summary:'H1 2024 EBITDA reached $1.82M on $6.10M revenue — a 19.2% improvement YoY. Gross margins held at 52% despite inflationary COGS pressure.',
+    executiveSummary:'H1 2024 showed strong operational leverage: revenue grew 19.1% to $6.10M while EBITDA expanded to $1.82M (29.8% margin). Q2 net income of $541K is the best quarter on record. Gross margin of 52.1% reflects disciplined cost management despite ~4% materials inflation. Net income of $1.01M in H1 represents a 41% improvement over H1 2023.',
+    narrative:'Every major P&L line improved YoY, with Q2 2024 net income of $541K as the standout. Operating leverage is clear: revenue grew 19% while OpEx grew only 8.6%. This is the structural improvement the board targeted. Tax load remains elevated and warrants review.',
+    kpis:[
+      {label:'H1 Revenue',    value:'$6.10M', unit:'$', trend:'up',     change:'+19.1% vs H2 2023'},
+      {label:'Gross Profit',  value:'$3.18M', unit:'$', trend:'up',     change:'+21.4%'},
+      {label:'EBITDA',        value:'$1.82M', unit:'$', trend:'up',     change:'+19.2%'},
+      {label:'Net Income',    value:'$1.01M', unit:'$', trend:'up',     change:'+41.1%'},
+      {label:'Gross Margin',  value:'52.1%',  unit:'%', trend:'stable', change:'+0.6pp'},
+      {label:'EBITDA Margin', value:'29.8%',  unit:'%', trend:'up',     change:'+0.2pp'},
+      {label:'OpEx',          value:'$1.46M', unit:'$', trend:'down',   change:'+8.6% controlled'},
+      {label:'Net Margin',    value:'16.6%',  unit:'%', trend:'up',     change:'+2.8pp'},
+    ],
+    charts:[
+      {id:'c1',type:'combo',title:'Revenue vs EBITDA by Quarter',subtitle:'Q3 2023 – Q2 2024',
+        data:[{name:"Q3'23",value:3120000,secondary:920000},{name:"Q4'23",value:3450000,secondary:1060000},{name:"Q1'24",value:2890000,secondary:850000},{name:"Q2'24",value:3210000,secondary:970000}]},
+      {id:'c2',type:'waterfall',title:'P&L Waterfall Q2 2024',subtitle:'Revenue to net income',
+        data:[{name:'Revenue',value:3210000},{name:'COGS',value:-1480000},{name:'Gross Profit',value:1730000},{name:'OpEx',value:-760000},{name:'EBITDA',value:970000},{name:'D&A+Tax',value:-429000},{name:'Net Income',value:541000}]},
+      {id:'c3',type:'stacked',title:'Revenue vs Cost Structure',subtitle:'By quarter',
+        data:[{name:"Q3'23",value:3120000,secondary:1450000},{name:"Q4'23",value:3450000,secondary:1580000},{name:"Q1'24",value:2890000,secondary:1340000},{name:"Q2'24",value:3210000,secondary:1480000}]},
+      {id:'c4',type:'line',title:'Margin Trends (%)',subtitle:'Gross margin vs EBITDA margin',
+        data:[{name:"Q3'23",value:53.5,secondary:29.5},{name:"Q4'23",value:54.2,secondary:30.7},{name:"Q1'24",value:53.6,secondary:29.4},{name:"Q2'24",value:53.9,secondary:30.2}]},
+      {id:'c5',type:'donut',title:'Cost Breakdown H1 2024',subtitle:'$6.1M revenue allocation',
+        data:[{name:'Gross Profit',value:3180000},{name:'COGS',value:2920000},{name:'OpEx',value:1460000},{name:'Net Income',value:1010000}]},
+    ],
+    insights:[
+      {type:'positive',text:'Q2 2024 net income of $541K is the best quarter ever — exceeding Q4 2023 by $133K.',icon:'🏆'},
+      {type:'positive',text:'OpEx grew only 8.6% while revenue grew 19.1% — operating leverage confirmed.',icon:'📈'},
+      {type:'neutral', text:'Q1 revenue dip to $2.89M is seasonal — Q1 is historically 10-12% below Q4.',icon:'📅'},
+      {type:'positive',text:'Gross margin 52.1% is stable despite ~4% materials inflation — pricing power intact.',icon:'💰'},
+      {type:'alert',  text:'D&A+Tax load is 44% of EBITDA in Q2 — elevated vs peers. Tax planning review needed.',icon:'⚠️'},
+    ],
+    recommendations:[
+      'Extend the OpEx efficiency program that held growth to 8.6% into H2 2024.',
+      'Initiate tax planning review — elevated rate reducing net income by ~$90K vs peers.',
+      'Set Q3 2024 revenue target at $3.35M to maintain 19% YoY growth trajectory.',
+      'Investigate Q1 seasonality — can product launches reduce the Q4 to Q1 revenue dip?',
+    ],
+    dataQuality:{score:99,issues:[],completeness:'100%'},
+  },
 };
 
-// ── CDN script loader ────────────────────────────────────────────
-function loadScript(src){
-  return new Promise((ok,fail)=>{
-    if(document.querySelector(`script[src="${src}"]`))return ok();
-    const s=document.createElement('script');
-    s.src=src; s.onload=ok; s.onerror=fail;
-    document.head.appendChild(s);
-  });
-}
+// ── State ─────────────────────────────────────────────────────────
+const S={dept:null,file:null,rawText:'',dash:null,ci:{},ct:{},tab:'overview',insF:'all',pct:false,ksel:null,vcat:'all',sidx:0,range:100};
 
-// ── Utility ──────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────
 const $=id=>document.getElementById(id);
-const mk=(tag,cls,html='')=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html)e.innerHTML=html;return e;};
+const mk=(tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e;};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-function showScr(id){
-  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
-  $('scr-'+id).classList.add('on');
-}
-function showErr(msg){
-  const e=$('err');
-  if(msg){e.textContent='⚠️ '+msg;e.classList.add('on');}
-  else{e.textContent='';e.classList.remove('on');}
-}
-function setProc(msg,pct){
-  $('proc-step').textContent=msg;
-  $('proc-bar').style.width=pct+'%';
-}
-function checkBtn(){
-  $('gen-btn').disabled=!(S.rawText.trim()||S.file);
-}
+function showScr(id){document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));$('scr-'+id).classList.add('on');}
+function setProc(msg,pct){$('proc-step').textContent=msg;$('proc-bar').style.width=pct+'%';}
+function showErr(msg){const e=$('err');if(msg){e.textContent='⚠️ '+msg;e.classList.add('on');}else{e.textContent='';e.classList.remove('on');}}
+function checkBtn(){$('gen-btn').disabled=!(S.rawText.trim()||S.file);}
 
-// ── INIT ─────────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────────
 (function init(){
-  // dept chips
   const dr=$('dept-row');
   DEPTS.forEach(d=>{
-    const b=mk('button','chip');b.dataset.id=d.id;
-    b.innerHTML=`${d.icon} ${d.label}`;
-    b.onclick=()=>{
-      if(S.dept===d.id){S.dept=null;b.classList.remove('on');}
-      else{dr.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));S.dept=d.id;b.classList.add('on');}
-    };
+    const b=mk('button','chip');b.dataset.id=d.id;b.innerHTML=d.icon+' '+d.label;
+    b.onclick=()=>{if(S.dept===d.id){S.dept=null;b.classList.remove('on');}else{dr.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));S.dept=d.id;b.classList.add('on');}};
     dr.appendChild(b);
   });
-  // samples
   const sr=$('sample-row');
   SAMPLES.forEach(s=>{
     const b=mk('button','chip');b.textContent=s.l;
     b.onclick=()=>{
-      $('paste').value=s.v; S.rawText=s.v; S.file=null;
-      $('file-ok').classList.remove('on');
-      $('dept-row').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
-      const dc=$('dept-row').querySelector(`[data-id="${s.d}"]`);
-      if(dc){dc.classList.add('on');S.dept=s.d;}
-      checkBtn(); showErr('');
+      $('paste').value=s.v;S.rawText=s.v;S.file=null;$('file-ok').classList.remove('on');
+      dr.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+      const dc=dr.querySelector('[data-id="'+s.d+'"]');if(dc){dc.classList.add('on');S.dept=s.d;}
+      checkBtn();showErr('');
     };
     sr.appendChild(b);
   });
-  // paste
   $('paste').oninput=e=>{S.rawText=e.target.value;checkBtn();};
-  // tabs
   document.querySelectorAll('#tab-bar .tab').forEach(t=>{
     t.onclick=()=>{
+      // Block locked tabs in demo mode
+      if(S.dash&&S.dash.isDemo&&t.dataset.p!=='overview'){
+        toggleKey();setTimeout(()=>$('api-inp').focus(),100);return;
+      }
       document.querySelectorAll('#tab-bar .tab').forEach(x=>x.classList.remove('on'));
       document.querySelectorAll('.tpanel').forEach(x=>x.classList.remove('on'));
-      t.classList.add('on');
-      const p=$('p-'+t.dataset.p);if(p)p.classList.add('on');
-      S.tab=t.dataset.p;
-      if(S.tab==='viz')renderVizTab();
+      t.classList.add('on');const p=$('p-'+t.dataset.p);if(p)p.classList.add('on');
+      S.tab=t.dataset.p;if(S.tab==='viz')renderVizTab();
     };
   });
-  // viz cat filter
   const vcr=$('viz-cat-row');
   ['all',...Object.keys(VCATS)].forEach(cat=>{
     const b=mk('button','chip');b.style.fontSize='9.5px';b.style.padding='3px 8px';
-    b.textContent=cat==='all'?'All':cat;b.dataset.cat=cat;
-    if(cat==='all')b.classList.add('on');
-    b.onclick=()=>{
-      vcr.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
-      b.classList.add('on');S.vizCat=cat;renderVizTypePanel();
-    };
+    b.textContent=cat==='all'?'All':cat;if(cat==='all')b.classList.add('on');
+    b.onclick=()=>{vcr.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));b.classList.add('on');S.vcat=cat;renderVizTypePanel();};
     vcr.appendChild(b);
   });
 })();
 
-// ── KEY PANEL ────────────────────────────────────────────────────
-function toggleKey(){
-  const p=$('key-panel');p.classList.toggle('open');
-  const hasKey=$('api-inp').value.trim();
-  $('key-lbl').textContent=hasKey?'Key ✓':'API Key';
-  if(hasKey)$('key-btn').classList.add('ok');else $('key-btn').classList.remove('ok');
-}
+// ── API Key ────────────────────────────────────────────────────────
+function toggleKey(){$('key-panel').classList.toggle('open');}
 
-// ── TEST API KEY ─────────────────────────────────────────────────
 async function testKey(){
-  const key=document.getElementById('api-inp').value.trim();
-  const tr=document.getElementById('test-result');
-  const tb=document.getElementById('test-btn');
+  const key=$('api-inp').value.trim();
+  const tr=$('test-res'),tb=$('test-btn');
   if(!key){tr.textContent='Enter a key first';tr.style.color='var(--w)';return;}
   tb.disabled=true;tb.textContent='Testing…';tr.textContent='';
   try{
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'anthropic-version':'2023-06-01',
-        'x-api-key':key,
-        'anthropic-dangerous-direct-browser-access':'true',
-      },
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:10,
-        messages:[{role:'user',content:'Say OK'}]})
+      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','x-api-key':key,'anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:10,messages:[{role:'user',content:'Hi'}]})
     });
     const d=await r.json();
     if(r.ok&&d.content){
-      tr.textContent='✅ Key works!';tr.style.color='var(--a3)';
-      document.getElementById('key-lbl').textContent='Key ✓';
-      document.getElementById('key-btn').style.borderColor='rgba(16,185,129,.4)';
-      document.getElementById('key-btn').style.color='var(--a3)';
-    } else {
-      tr.textContent='❌ '+(d?.error?.message||'HTTP '+r.status);tr.style.color='var(--d)';
-    }
-  } catch(e){
-    tr.textContent='❌ Network error — check connection';tr.style.color='var(--d)';
-  }
+      tr.textContent='✅ Key valid!';tr.style.color='var(--a3)';
+      $('key-lbl').textContent='Key ✓';
+      $('key-btn').style.borderColor='rgba(16,185,129,.4)';
+      $('key-btn').style.color='var(--a3)';
+    }else{tr.textContent='❌ '+(d?.error?.message||'HTTP '+r.status);tr.style.color='var(--d)';}
+  }catch(e){tr.textContent='❌ Network error';tr.style.color='var(--d)';}
   tb.disabled=false;tb.textContent='🧪 Test';
 }
 
-// ── FILE HANDLING ────────────────────────────────────────────────
-function handleDrop(e){
-  e.preventDefault();
-  $('dropzone').classList.remove('over');
-  const f=e.dataTransfer?.files?.[0];
-  if(f)loadFile(f);
-}
+// ── File handling ─────────────────────────────────────────────────
+function handleDrop(e){e.preventDefault();$('dropzone').classList.remove('over');const f=e.dataTransfer?.files?.[0];if(f)loadFile(f);}
 function handleFileInput(e){if(e.target.files[0])loadFile(e.target.files[0]);}
 
 async function loadFile(file){
   showErr('');
   try{
     if(file.name.toLowerCase().endsWith('.pdf')){
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc=
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      const buf=await file.arrayBuffer();
-      const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+      await loadScriptCDN('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
       let txt='';
-      for(let i=1;i<=Math.min(pdf.numPages,20);i++){
-        const pg=await pdf.getPage(i);
-        const ct=await pg.getTextContent();
-        txt+=ct.items.map(x=>x.str).join(' ')+'\n';
-      }
+      for(let i=1;i<=Math.min(pdf.numPages,20);i++){const pg=await pdf.getPage(i);const c=await pg.getTextContent();txt+=c.items.map(x=>x.str).join(' ')+'\n';}
       S.file={type:'pdf',text:txt.slice(0,6000),pages:pdf.numPages,fileName:file.name};
-      $('paste').value=txt.slice(0,2000);
-      S.rawText=txt.slice(0,3000);
-      setFileBadge(`${file.name} · ${pdf.numPages} pages`);
-    } else {
+      $('paste').value=txt.slice(0,2000);S.rawText=txt.slice(0,3000);
+      $('file-ok-txt').textContent=file.name+' · '+pdf.numPages+' pages';$('file-ok').classList.add('on');
+    }else{
       const wb=XLSX.read(new Uint8Array(await file.arrayBuffer()),{type:'array',cellDates:true,raw:false});
       const sheets={};let total=0;
-      wb.SheetNames.forEach(n=>{
-        const ws=wb.Sheets[n];
-        const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',blankrows:false});
-        sheets[n]={raw,json:XLSX.utils.sheet_to_json(ws,{defval:''}),rowCount:raw.length};
-        total+=raw.length;
-      });
+      wb.SheetNames.forEach(n=>{const ws=wb.Sheets[n];const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',blankrows:false});sheets[n]={raw,json:XLSX.utils.sheet_to_json(ws,{defval:''}),rowCount:raw.length};total+=raw.length;});
       S.file={type:'excel',sheets,names:wb.SheetNames,total,fileName:file.name};
-      let preview='';
-      wb.SheetNames.forEach(n=>{
-        const s=sheets[n];
-        preview+=`=== Sheet: ${n} (${s.rowCount} rows) ===\n`;
-        s.raw.slice(0,12).forEach((row,i)=>{
-          const l=row.filter(c=>c!==''&&c!=null).join(' | ');
-          if(l.trim())preview+=`Row${i+1}: ${l}\n`;
-        });
-        preview+='\n';
-      });
-      $('paste').value=preview.slice(0,2000);
-      S.rawText=preview.slice(0,3000);
-      setFileBadge(`${file.name} · ${wb.SheetNames.length} sheet(s) · ${total.toLocaleString()} rows`);
+      let prev='';
+      wb.SheetNames.forEach(n=>{const s=sheets[n];prev+='=== '+n+' ('+s.rowCount+' rows) ===\n';s.raw.slice(0,12).forEach((row,i)=>{const l=row.filter(c=>c!==''&&c!=null).join(' | ');if(l.trim())prev+='Row'+(i+1)+': '+l+'\n';});prev+='\n';});
+      $('paste').value=prev.slice(0,2000);S.rawText=prev.slice(0,3000);
+      $('file-ok-txt').textContent=file.name+' · '+wb.SheetNames.length+' sheet(s) · '+total.toLocaleString()+' rows';$('file-ok').classList.add('on');
     }
     checkBtn();
-  } catch(e){showErr('Could not read file: '+e.message);}
+  }catch(e){showErr('Could not read file: '+e.message);}
 }
-function setFileBadge(txt){
-  $('file-ok-txt').textContent=txt;$('file-ok').classList.add('on');
-}
+function loadScriptCDN(src){return new Promise((ok,fail)=>{if(document.querySelector('script[src="'+src+'"]'))return ok();const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=fail;document.head.appendChild(s);});}
 
-// ── CLAUDE API ───────────────────────────────────────────────────
-async function claude(system,user,maxTokens=5000){
+// ── Claude API ─────────────────────────────────────────────────────
+async function callClaude(system,user,maxTokens){
   const key=$('api-inp').value.trim();
-  if(!key){
-    // auto-open key panel so user knows what to do
-    $('key-panel').classList.add('open');
-    throw new Error('Please enter your Anthropic API key first — click the 🔑 API Key button at the top.');
-  }
-  const hdrs={
-    'Content-Type':'application/json',
-    'anthropic-version':'2023-06-01',
-    'x-api-key':key,
-    'anthropic-dangerous-direct-browser-access':'true',
-  };
+  if(!key){$('key-panel').classList.add('open');throw new Error('Please enter your Anthropic API key — click the 🔑 button.');}
   let r;
   try{
     r=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:hdrs,
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:maxTokens,system,
-        messages:[{role:'user',content:user}]
-      })
+      method:'POST',
+      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','x-api-key':key,'anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:maxTokens||5000,system,messages:[{role:'user',content:user}]})
     });
-  } catch(netErr){
-    throw new Error('Network error — could not reach api.anthropic.com. Check your internet connection and that pop-up/ad blockers are not blocking the request. ('+netErr.message+')');
-  }
-  let d;
-  try{d=await r.json();}
-  catch{throw new Error(`API returned non-JSON response (HTTP ${r.status}). The key may be invalid.`);}
+  }catch(e){throw new Error('Network error — cannot reach api.anthropic.com ('+e.message+')');}
+  let d;try{d=await r.json();}catch{throw new Error('Non-JSON API response (status '+r.status+')');}
   if(!r.ok||d.error){
-    const msg=d?.error?.message||`HTTP ${r.status}`;
-    if(r.status===401)throw new Error('Invalid API key — double-check it at console.anthropic.com');
-    if(r.status===429)throw new Error('Rate limited — wait a moment then try again');
-    if(r.status===400)throw new Error('Bad request: '+msg);
-    throw new Error('API error: '+msg);
+    const m=d?.error?.message||'HTTP '+r.status;
+    if(r.status===401)throw new Error('Invalid API key — check at console.anthropic.com');
+    if(r.status===429)throw new Error('Rate limited — wait a moment and retry');
+    throw new Error('API error: '+m);
   }
   return d.content?.[0]?.text??'';
 }
 
-// ── GENERATE ─────────────────────────────────────────────────────
+// ── AI Generate (full mode) ────────────────────────────────────────
 async function generate(){
   if(!S.rawText.trim()&&!S.file)return;
-  showScr('proc'); showErr(''); setProc('🔍 Ingesting data…',12);
+  showScr('proc');showErr('');setProc('Ingesting data…',10);
   let ctx='';
   if(S.file?.type==='excel'){
-    ctx=`FILE: ${S.file.fileName} | Sheets: ${S.file.names.join(', ')}\n\n`;
-    Object.entries(S.file.sheets).forEach(([n,s])=>{
-      ctx+=`\n=== SHEET "${n}" (${s.rowCount} rows) ===\n`;
-      s.raw.slice(0,35).forEach((row,i)=>{
-        const l=row.filter(c=>c!==''&&c!=null).join(' | ');
-        if(l.trim())ctx+=`Row${i+1}: ${l}\n`;
-      });
-    });
-  } else if(S.file?.type==='pdf'){
-    ctx=`PDF: ${S.file.fileName} (${S.file.pages} pages)\n\n${S.file.text}`;
-  } else {
-    ctx=S.rawText.slice(0,4500);
-  }
+    ctx='FILE: '+S.file.fileName+'\n';
+    Object.entries(S.file.sheets).forEach(([n,s])=>{ctx+='\n=== SHEET "'+n+'" ('+s.rowCount+' rows) ===\n';s.raw.slice(0,35).forEach((row,i)=>{const l=row.filter(c=>c!==''&&c!=null).join(' | ');if(l.trim())ctx+='Row'+(i+1)+': '+l+'\n';});});
+  }else if(S.file?.type==='pdf'){ctx='PDF: '+S.file.fileName+'\n\n'+S.file.text;}
+  else{ctx=S.rawText.slice(0,4500);}
   try{
-    const raw=await claude(
-      'You are a senior ERP analyst. Respond with pure valid JSON ONLY. No markdown, no code fences, no extra text.',
-      `Analyse this business data. Department hint: ${S.dept??'auto-detect'}.
-
-DATA:
-${ctx}
-
-Return ONLY this JSON (no extra text):
-{
-  "department":"sales|hr|operations|finance|marketing|supply|it|executive",
-  "title":"Precise title from the data",
-  "period":"Time period e.g. Jan-Dec 2024",
-  "summary":"2 sentences describing the data",
-  "kpis":[{"label":"KPI name","value":"actual value","unit":"$|%|units|hrs","trend":"up|down|stable","change":"+12.3%"}],
-  "charts":[
-    {"id":"c1","type":"area","title":"chart title","subtitle":"what it tracks","data":[{"name":"label","value":123,"secondary":45}]},
-    {"id":"c2","type":"bar","title":"chart title","subtitle":"","data":[{"name":"label","value":123}]},
-    {"id":"c3","type":"pie","title":"chart title","subtitle":"","data":[{"name":"label","value":123}]},
-    {"id":"c4","type":"radar","title":"chart title","subtitle":"","data":[{"name":"dimension","value":85}]},
-    {"id":"c5","type":"scatter","title":"chart title","subtitle":"","data":[{"name":"item","value":100,"secondary":200}]}
-  ],
-  "insights":[{"type":"positive|negative|neutral|alert","text":"insight with real numbers","icon":"emoji"}],
-  "recommendations":["Actionable recommendation"],
-  "dataQuality":{"score":85,"issues":["issue text"],"completeness":"92%"},
-  "executiveSummary":"4-5 sentence board-level narrative with specific numbers"
-}
-
-RULES: Use ONLY actual data values. 8-12 KPIs. Exactly 5 charts, 6-10 data points each. 6-8 insights. 4-5 recommendations.`,
+    setProc('Extracting KPIs…',22);
+    const raw=await callClaude(
+      'You are a senior ERP analyst. Reply with pure valid JSON only — no markdown, no code fences, no preamble.',
+      'Analyse this business data. Department hint: '+(S.dept||'auto-detect')+'.\n\nDATA:\n'+ctx+'\n\nReturn ONLY this JSON:\n{"department":"sales|hr|operations|finance|marketing|supply|it|executive","title":"string","period":"string","summary":"2 sentences","kpis":[{"label":"","value":"","unit":"$|%|units|hrs|etc","trend":"up|down|stable","change":""}],"charts":[{"id":"c1","type":"area","title":"","subtitle":"","data":[{"name":"","value":123,"secondary":45}]},{"id":"c2","type":"bar","title":"","subtitle":"","data":[{"name":"","value":123}]},{"id":"c3","type":"pie","title":"","subtitle":"","data":[{"name":"","value":123}]},{"id":"c4","type":"radar","title":"","subtitle":"","data":[{"name":"","value":85}]},{"id":"c5","type":"scatter","title":"","subtitle":"","data":[{"name":"","value":100,"secondary":200}]}],"insights":[{"type":"positive|negative|neutral|alert","text":"specific text with numbers","icon":"emoji"}],"recommendations":["action"],"dataQuality":{"score":88,"issues":[],"completeness":"94%"},"executiveSummary":"4-5 sentences"}\n\nRules: use real data values. 8-12 KPIs. 5 charts each with 6-10 data points. 6-8 insights. 4-5 recommendations.',
       5500
     );
-    setProc('🧠 Generating board narrative…',70);
+    setProc('Generating narrative…',72);
     let parsed;
-    try{parsed=JSON.parse(raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim());}
-    catch{
-      const m=raw.match(/\{[\s\S]*\}/);
-      if(m)try{parsed=JSON.parse(m[0]);}catch{throw new Error('AI returned malformed JSON. Try a simpler dataset.');}
-      else throw new Error('AI returned malformed JSON. Try a simpler dataset.');
-    }
-    const narr=await claude(
-      'You are a CFO. Write concise board-level narrative. No bullet points. 4-5 sentences max.',
-      `Dept: ${parsed.department}. KPIs: ${JSON.stringify((parsed.kpis??[]).slice(0,6))}. Top insight: ${(parsed.insights??[])[0]?.text??''}. Lead rec: ${(parsed.recommendations??[])[0]??''}. Be specific with numbers.`,
-      500
+    const clean=raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
+    try{parsed=JSON.parse(clean);}
+    catch{const m=clean.match(/\{[\s\S]*\}/);if(m){try{parsed=JSON.parse(m[0]);}catch{throw new Error('Malformed JSON from AI. Try a smaller or cleaner dataset.');}}else{throw new Error('AI returned no JSON. Try again or simplify your data.');}}
+    const narr=await callClaude(
+      'You are a CFO. Write a concise 3-sentence board narrative. No bullets. Be specific with numbers.',
+      'Dept: '+parsed.department+'. KPIs: '+JSON.stringify((parsed.kpis||[]).slice(0,5))+'. Top insight: '+((parsed.insights||[])[0]?.text||''),
+      400
     );
-    setProc('✅ Building dashboard…',97);
-    await sleep(300);
-    S.dash={...parsed,narrative:narr,generatedAt:new Date().toLocaleString()};
-    buildDash();
-    showScr('dash');
-    $('new-btn').style.display='';
-  } catch(e){
-    showErr(e.message||'Generation failed. Check your API key and try again.');
-    showScr('input');
-  }
+    setProc('Building dashboard…',96);await sleep(200);
+    S.dash={...parsed,narrative:narr,generatedAt:new Date().toLocaleString(),isDemo:false};
+    buildDash();showScr('dash');$('new-btn').style.display='';
+  }catch(e){showErr(e.message||'Generation failed.');showScr('input');}
 }
 
-// ── BUILD DASHBOARD ──────────────────────────────────────────────
+// ── Demo Mode (no API) ─────────────────────────────────────────────
+function genDemo(key){
+  const demo=DEMOS[key]||DEMOS.sales;
+  S.dash={...demo,generatedAt:new Date().toLocaleString()};
+  buildDash();showScr('dash');$('new-btn').style.display='';
+}
+
+// ── Build Dashboard ────────────────────────────────────────────────
 function buildDash(){
-  const D=S.dash;
+  const D=S.dash;if(!D)return;
+  const isDemo=!!D.isDemo;
   const dept=DEPTS.find(d=>d.id===D.department)||DEPTS[0];
-  // header
-  $('dash-badges').innerHTML=`
-    <span class="badge" style="background:${dept.col}18;color:${dept.col};border:1px solid ${dept.col}44">${dept.icon} ${dept.label}</span>
-    <span class="badge" style="background:rgba(255,255,255,.04);color:var(--mu);border:1px solid var(--bd)">AI Generated</span>
-    ${S.file?`<span class="badge" style="background:rgba(16,185,129,.1);color:var(--a3);border:1px solid rgba(16,185,129,.3)">📁 ${S.file.fileName}</span>`:''}`;
-  $('dash-title').textContent=D.title;
-  $('dash-period').textContent=`Period: ${D.period} · Generated ${D.generatedAt}`;
-  // summary
-  $('sum-txt').textContent=D.summary;
-  if(D.dataQuality){
-    $('q-badge').style.display='';
-    $('q-pct').textContent=D.dataQuality.score+'%';
-    $('q-pct').style.color=D.dataQuality.score>80?'var(--a3)':'var(--warn)';
-    $('q-comp').textContent=D.dataQuality.completeness;
-  }
-  // threshold slider max
-  let mx=0;
-  (D.charts??[]).slice(0,2).forEach(c=>(c.data??[]).forEach(d=>{if(+d.value>mx)mx=+d.value;}));
-  mx=mx||100;
-  $('thr-sl').max=mx; $('thr-sl').value=0;
-  $('thr-max').textContent=mx.toLocaleString(undefined,{maximumFractionDigits:0});
-  $('thr-val').textContent='0';
-  // kpi filter chips
-  const kc=$('kpi-chips');kc.innerHTML='';
-  (D.kpis??[]).slice(0,8).forEach((k,i)=>{
-    const b=mk('button','ctype');b.style.fontSize='10px';b.style.padding='3px 8px';b.textContent=k.label;
-    b.onclick=()=>{S.selKPI=S.selKPI===i?null:i;renderKPIs();};
-    kc.appendChild(b);
-  });
-  renderKPIs();
-  renderPrevCharts();
-  renderInsights();
-  renderReport();
-  renderDataTab();
-}
 
-// ── KPI CARDS ─────────────────────────────────────────────────────
-function renderKPIs(){
-  const D=S.dash;
-  const g=$('kpi-grid');g.innerHTML='';
-  (D.kpis??[]).forEach((k,i)=>{
-    const div=mk('div','kpi-c au');
-    div.style.cssText=`animation-delay:${i*.04}s;border-top:2.5px solid ${C[i%12]}`;
-    if(S.selKPI===i)div.classList.add('sel');
-    const tr=k.trend==='up'?'up':k.trend==='down'?'down':'stable';
-    const ti=k.trend==='up'?'▲':k.trend==='down'?'▼':'→';
-    const bw=S.pctBars?`${Math.min(100,Math.abs(parseFloat(k.change)||50))}%`:'55%';
-    const unit=k.unit&&k.unit!=='units'?`<span style="font-size:12px;color:var(--mu);font-family:'DM Sans',sans-serif"> ${k.unit}</span>`:'';
-    div.innerHTML=`<div class="kpi-bar"><div class="kpi-fill" style="background:${C[i%12]};width:${bw}"></div></div>
-      <div class="kpi-lbl">${k.label}</div>
-      <div class="kpi-val">${k.value}${unit}</div>
-      <div class="kpi-chg ${tr}">${ti} ${k.change}</div>`;
-    div.onclick=()=>{S.selKPI=S.selKPI===i?null:i;renderKPIs();};
-    g.appendChild(div);
-  });
-}
-
-// ── CHART.JS BUILDER ─────────────────────────────────────────────
-const CAJD={
-  responsive:true,maintainAspectRatio:false,
-  plugins:{
-    legend:{labels:{color:'#4A6585',font:{family:"'DM Sans',sans-serif",size:11}}},
-    tooltip:{backgroundColor:'#0C1422',borderColor:'#1A2B40',borderWidth:1,
-      titleColor:'#E2EBF6',bodyColor:'#4A6585',
-      titleFont:{family:"'JetBrains Mono',monospace"},bodyFont:{family:"'DM Sans',sans-serif"}}
-  },
-  scales:{
-    x:{grid:{color:'rgba(26,43,64,.6)'},ticks:{color:'#4A6585',font:{family:"'DM Sans',sans-serif",size:10}}},
-    y:{grid:{color:'rgba(26,43,64,.6)'},ticks:{color:'#4A6585',font:{family:"'DM Sans',sans-serif",size:10}}}
-  }
-};
-function rsc(){return {r:{grid:{color:'rgba(26,43,64,.6)'},pointLabels:{color:'#4A6585',font:{family:"'DM Sans',sans-serif",size:10}},ticks:{display:false}}};}
-function nsc(){return {x:{display:false},y:{display:false}};}
-
-function destroyChart(id){if(S.chartInst[id]){S.chartInst[id].destroy();delete S.chartInst[id];}}
-
-function makeChart(canvasId,chartObj,hpx){
-  destroyChart(canvasId);
-  const canvas=$(canvasId);if(!canvas)return;
-  if(hpx)canvas.parentElement.style.height=hpx+'px';
-  const data=chartObj?.data??[];
-  const type=chartObj?.type??'bar';
-  const labels=data.map(d=>d.name);
-  const vals=data.map(d=>+d.value||0);
-  const sec=data.map(d=>d.secondary!=null?+d.secondary||0:null);
-  const hasSec=sec.some(v=>v!==null);
-  const c0=C[0],c1=C[1];
-  let cfg;
-
-  if(type==='pie'||type==='donut'){
-    cfg={type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:C.slice(0,labels.length),borderWidth:0,hoverOffset:5}]},
-      options:{...CAJD,cutout:type==='donut'?'55%':'0%',scales:nsc()}};
-  } else if(type==='polarArea'){
-    cfg={type:'polarArea',data:{labels,datasets:[{data:vals,backgroundColor:C.map(c=>c+'BB'),borderColor:C,borderWidth:1}]},
-      options:{...CAJD,scales:{r:{...rsc().r,ticks:{color:'#4A6585',font:{size:9}}}}}};
-  } else if(type==='radar'){
-    const ds=[{label:'Value',data:vals,borderColor:c0,backgroundColor:c0+'28',borderWidth:2,pointRadius:3}];
-    if(hasSec)ds.push({label:'Target',data:sec,borderColor:c1,backgroundColor:c1+'18',borderWidth:2,borderDash:[5,4],pointRadius:3});
-    cfg={type:'radar',data:{labels,datasets:ds},options:{...CAJD,scales:rsc()}};
-  } else if(type==='scatter'||type==='bubble'){
-    const pts=data.map(d=>({x:+d.value||0,y:+d.secondary||0,r:type==='bubble'?Math.max(4,Math.min(20,Math.abs(+d.value||5)/50)):6,label:d.name}));
-    cfg={type:'bubble',data:{datasets:[{label:'Data',data:pts,backgroundColor:c0+'99',borderColor:c0,borderWidth:1}]},
-      options:{...CAJD}};
-  } else if(type==='area'){
-    const ds=[{label:'Value',data:vals,borderColor:c0,backgroundColor:c0+'33',fill:true,tension:.4,pointRadius:3,pointBackgroundColor:c0,borderWidth:2.5}];
-    if(hasSec)ds.push({label:'Target',data:sec,borderColor:c1,backgroundColor:c1+'18',fill:true,tension:.4,pointRadius:3,pointBackgroundColor:c1,borderDash:[5,4],borderWidth:2});
-    cfg={type:'line',data:{labels,datasets:ds},options:{...CAJD}};
-  } else if(type==='line'){
-    const ds=[{label:'Value',data:vals,borderColor:c0,backgroundColor:'transparent',tension:.4,pointRadius:3.5,pointBackgroundColor:c0,borderWidth:2.5}];
-    if(hasSec)ds.push({label:'Target',data:sec,borderColor:c1,backgroundColor:'transparent',tension:.4,pointRadius:3,pointBackgroundColor:c1,borderDash:[5,4],borderWidth:2});
-    cfg={type:'line',data:{labels,datasets:ds},options:{...CAJD}};
-  } else if(type==='combo'){
-    const ds=[{type:'bar',label:'Value',data:vals,backgroundColor:c0+'BB',borderColor:c0,borderRadius:4}];
-    if(hasSec)ds.push({type:'line',label:'Target',data:sec,borderColor:c1,backgroundColor:'transparent',tension:.4,pointRadius:3,borderDash:[5,4],borderWidth:2});
-    cfg={type:'bar',data:{labels,datasets:ds},options:{...CAJD}};
-  } else if(type==='hbar'){
-    cfg={type:'bar',data:{labels,datasets:[{label:'Value',data:vals,backgroundColor:C.map(c=>c+'CC'),borderRadius:4}]},
-      options:{...CAJD,indexAxis:'y'}};
-  } else if(type==='stacked'){
-    const ds=[{label:'Value',data:vals,backgroundColor:c0+'CC',stack:'s'}];
-    if(hasSec)ds.push({label:'Secondary',data:sec,backgroundColor:c1+'BB',borderRadius:4,stack:'s'});
-    cfg={type:'bar',data:{labels,datasets:ds},options:{...CAJD}};
-  } else if(type==='waterfall'){
-    let run=0;const bases=[],heights=[];
-    data.forEach((d,i)=>{const v=+d.value||0;bases.push(i===0?0:run);heights.push(v);run+=v;});
-    const bgc=heights.map(v=>v>=0?'#10B98199':'#EF444499');
-    const opts={...CAJD};opts.plugins={...opts.plugins,legend:{display:false}};
-    cfg={type:'bar',data:{labels,datasets:[{label:'Base',data:bases,backgroundColor:'transparent',stack:'w'},{label:'Value',data:heights,backgroundColor:bgc,borderRadius:4,stack:'w'}]},options:opts};
-  } else {
-    // default bar
-    const bgc=vals.map((_,i)=>C[i%C.length]+'CC');
-    const ds=[{label:'Value',data:vals,backgroundColor:bgc,borderRadius:5,borderSkipped:false}];
-    if(hasSec)ds.push({label:'Target',data:sec,backgroundColor:c1+'99',borderRadius:5,borderSkipped:false});
-    cfg={type:'bar',data:{labels,datasets:ds},options:{...CAJD}};
-  }
-  const ctx2=canvas.getContext('2d');
-  S.chartInst[canvasId]=new Chart(ctx2,cfg);
-}
-
-// ── PREVIEW CHARTS ────────────────────────────────────────────────
-function renderPrevCharts(){
-  const D=S.dash;
-  const wrap=$('prev-charts');wrap.innerHTML='';
-  const thr=+$('thr-sl').value||0;
-  (D.charts??[]).slice(0,2).forEach((c,i)=>{
-    const card=mk('div','card au1');card.style.cssText=`padding:20px;animation-delay:${i*.07}s`;
-    const cid=`pc${i}`;
-    card.innerHTML=`<div style="font-weight:700;font-size:14px;margin-bottom:2px">${c.title}</div>
-      <div style="font-size:11.5px;color:var(--mu);margin-bottom:14px">${c.subtitle??''}</div>
-      <div style="height:200px;position:relative"><canvas id="${cid}"></canvas></div>`;
-    wrap.appendChild(card);
-    const fd={...c,data:thr>0?(c.data??[]).filter(d=>(+d.value)>=thr):(c.data??[])};
-    requestAnimationFrame(()=>makeChart(cid,fd,200));
-  });
-}
-
-// ── VIZ TAB ───────────────────────────────────────────────────────
-function renderVizTypePanel(){
-  const g=$('viz-type-list');g.innerHTML='';
-  const cats=S.vizCat==='all'?Object.keys(VCATS):[S.vizCat];
-  cats.forEach(cat=>{
-    const items=VCATS[cat];if(!items)return;
-    if(S.vizCat==='all'){const l=mk('div','vcat-lbl');l.textContent=cat;g.appendChild(l);}
-    const grid=mk('div','vgrid');
-    items.forEach(tid=>{
-      const m=VMETA[tid];if(!m)return;
-      const chart=(S.dash?.charts??[])[S.selIdx];
-      const cur=chart?(S.chartTypes[chart.id]||chart.type||'bar'):'bar';
-      const b=mk('button','vbtn'+(cur===tid?' on':''));
-      b.innerHTML=`<span class="vbtn-ico">${m.i}</span><span class="vbtn-lbl">${m.l}</span>`;
-      b.onclick=()=>{
-        if(chart){S.chartTypes[chart.id]=tid;}
-        renderVizTypePanel();renderMainChart();renderMiniGrid();
-      };
-      grid.appendChild(b);
-    });
-    g.appendChild(grid);
-  });
-}
-
-function renderVizTab(){
-  const D=S.dash;if(!D)return;
-  const ct=$('chart-sel-tabs');ct.innerHTML='';
-  (D.charts??[]).forEach((c,i)=>{
-    const b=mk('button','ctype'+(S.selIdx===i?' on':''));
-    b.style.cssText='font-size:11px;padding:5px 12px';
-    b.textContent=`${i+1}: ${(c.title??'').slice(0,22)}`;
-    b.onclick=()=>{S.selIdx=i;renderVizTab();};
-    ct.appendChild(b);
-  });
-  renderVizTypePanel();
-  renderMainChart();
-  renderMiniGrid();
-}
-
-function renderMainChart(){
-  const D=S.dash;if(!D)return;
-  const chart=(D.charts??[])[S.selIdx];if(!chart)return;
-  const type=S.chartTypes[chart.id]||chart.type||'bar';
-  const m=VMETA[type]||{l:type,i:'▌'};
-  $('mc-title').textContent=chart.title;
-  $('mc-sub').textContent=chart.subtitle??'';
-  $('mc-badge').innerHTML=`<span style="font-family:'JetBrains Mono';font-size:11px;color:var(--a)">${m.i}</span>
-    <span style="font-size:10.5px;color:var(--a);font-weight:600">${m.l}</span>`;
-  const n=Math.max(2,Math.round((chart.data??[]).length*S.range/100));
-  $('range-pts').textContent=`${n}/${(chart.data??[]).length} pts`;
-  makeChart('main-cv',{...chart,type,data:(chart.data??[]).slice(0,n)},320);
-}
-
-function renderMiniGrid(){
-  const D=S.dash;if(!D)return;
-  const g=$('mini-grid');g.innerHTML='';
-  (D.charts??[]).forEach((c,i)=>{
-    const div=mk('div','card mini-c'+(S.selIdx===i?' on':''));
-    const cid=`mc${i}`;
-    div.innerHTML=`<div style="font-weight:600;font-size:12.5px;margin-bottom:10px;display:flex;justify-content:space-between">
-      <span>${c.title}</span><span style="font-size:10px;color:var(--mu)">${S.chartTypes[c.id]||c.type}</span></div>
-      <div style="height:130px;position:relative"><canvas id="${cid}"></canvas></div>`;
-    div.onclick=()=>{S.selIdx=i;renderVizTab();};
-    g.appendChild(div);
-    requestAnimationFrame(()=>makeChart(cid,{...c,type:S.chartTypes[c.id]||c.type||'bar'},130));
-  });
-}
-
-function onRange(v){S.range=+v;renderMainChart();}
-
-// ── INSIGHTS ──────────────────────────────────────────────────────
-const IC={positive:'var(--a3)',negative:'var(--d)',alert:'var(--w)',neutral:'var(--a)'};
-
-function renderInsights(){
-  const D=S.dash;
-  // filter chips
-  const fr=$('ins-filter-row');fr.innerHTML='';
-  ['all','positive','negative','alert','neutral'].forEach(f=>{
-    const b=mk('button','chip'+(S.insFilter===f?' on':''));
-    b.textContent=f;
-    b.onclick=()=>{
-      S.insFilter=f;
-      fr.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
-      b.classList.add('on');
-      renderInsList();
-    };
-    fr.appendChild(b);
-  });
-  renderInsList();
-  // recs
-  const rl=$('rec-list');rl.innerHTML='';
-  (D.recommendations??[]).forEach((r,i)=>{
-    const d=mk('div','rec-c au');d.style.animationDelay=`${i*.06}s`;
-    d.innerHTML=`<div class="rec-n">${i+1}</div><div style="font-size:13.5px;line-height:1.65">${r}</div>`;
-    rl.appendChild(d);
-  });
-  // quality
-  if(D.dataQuality){
-    $('q-card').style.display='';
-    $('q-bar-fill').style.width=D.dataQuality.score+'%';
-    $('q-score').textContent=D.dataQuality.score+'%';
-    $('q-compl').textContent='Completeness: '+D.dataQuality.completeness;
-    const qi=$('q-issues');qi.innerHTML='';
-    (D.dataQuality.issues??[]).forEach(iss=>{
-      const d=mk('div');d.style.cssText='font-size:12px;color:var(--w);margin-top:5px';d.textContent='⚠ '+iss;qi.appendChild(d);
-    });
-  }
-}
-function renderInsList(){
-  const D=S.dash;
-  const shown=(D.insights??[]).filter(ins=>S.insFilter==='all'||ins.type===S.insFilter);
-  $('ins-count').textContent=shown.length+' results';
-  const il=$('ins-list');il.innerHTML='';
-  shown.forEach((ins,i)=>{
-    const col=IC[ins.type]||'var(--a)';
-    const d=mk('div','ins-c au');d.style.animationDelay=`${i*.05}s`;d.style.borderLeftColor=col;
-    d.innerHTML=`<span class="ins-ico">${ins.icon??'📊'}</span>
-      <div><span class="ins-badge" style="background:${col.replace('var(','').replace(')','').includes('#')?col:col}18;color:${col}">${ins.type}</span>
-        <div class="ins-txt">${ins.text}</div></div>`;
-    il.appendChild(d);
-  });
-  if(!shown.length){const d=mk('div');d.style.cssText='color:var(--mu);padding:20px 0;font-size:13px';d.textContent='No insights match this filter.';il.appendChild(d);}
-}
-
-// ── BOARD REPORT ──────────────────────────────────────────────────
-function renderReport(){
-  const D=S.dash;
-  $('exec-period').textContent=`Period: ${D.period} · ${D.generatedAt}`;
-  $('exec-summary').style.cssText='font-size:15.5px;line-height:1.9;border-left:3px solid var(--a);padding-left:18px;margin-bottom:22px';
-  $('exec-summary').textContent=D.executiveSummary;
-  $('exec-narr').style.cssText='font-size:14px;line-height:1.9;color:var(--mu)';
-  $('exec-narr').textContent=D.narrative;
-  const rg=$('kpi-rep-grid');rg.innerHTML='';
-  (D.kpis??[]).slice(0,8).forEach((k,i)=>{
-    const d=mk('div','kpi-rep');
-    const tc=k.trend==='up'?'var(--a3)':k.trend==='down'?'var(--d)':'var(--mu)';
-    const ti=k.trend==='up'?'📈':k.trend==='down'?'📉':'➡️';
-    d.innerHTML=`<div>
-      <div style="font-size:10.5px;color:var(--mu);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">${k.label}</div>
-      <div style="font-family:'JetBrains Mono';font-weight:800;font-size:20px">${k.value}${k.unit&&k.unit!=='units'?' '+k.unit:''}</div>
-    </div>
-    <div style="text-align:right">
-      <div style="font-size:20px">${ti}</div>
-      <div style="font-size:12px;font-weight:700;color:${tc}">${k.change}</div>
-    </div>`;
-    rg.appendChild(d);
-  });
-}
-
-// ── DATA TAB ──────────────────────────────────────────────────────
-function renderDataTab(){
-  const D=S.dash;
-  renderKpiTable('');
-  // chart tables
-  const cg=$('cdata-grid');cg.innerHTML='';
-  (D.charts??[]).forEach((c,i)=>{
-    const div=mk('div','card');div.style.padding='16px';
-    const hasSec=(c.data??[]).some(d=>d.secondary!=null);
-    let rows='';
-    (c.data??[]).forEach(row=>{
-      rows+=`<tr><td>${row.name}</td><td class="mono" style="text-align:right;color:var(--a)">${row.value}</td>
-        ${hasSec?`<td class="mono" style="text-align:right;color:var(--a2)">${row.secondary??''}</td>`:''}</tr>`;
-    });
-    div.innerHTML=`<div style="font-weight:600;margin-bottom:10px;font-size:13px">${c.title}</div>
-      <div style="overflow-x:auto"><table>
-        <thead><tr><th>Label</th><th style="text-align:right">Value</th>${hasSec?'<th style="text-align:right">2nd</th>':''}</tr></thead>
-        <tbody>${rows}</tbody></table></div>`;
-    cg.appendChild(div);
-  });
-  // source
-  const ss=$('src-sheets');ss.innerHTML='';
-  if(S.file?.type==='excel'){
-    Object.entries(S.file.sheets).forEach(([name,sheet])=>{
-      const div=mk('div','card au2');div.style.cssText='padding:18px;margin-bottom:12px;overflow-x:auto';
-      let ths='',trs='';
-      (sheet.raw[0]??[]).forEach(h=>{ths+=`<th style="background:var(--card)">${h||'?'}</th>`;});
-      sheet.raw.slice(1,20).forEach(row=>{
-        trs+='<tr>';row.forEach(cell=>{trs+=`<td class="mono" style="white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis">${String(cell??'')}</td>`;});trs+='</tr>';
-      });
-      if(sheet.raw.length>20)trs+=`<tr><td colspan="${(sheet.raw[0]??[]).length}" style="color:var(--mu)">…${sheet.raw.length-20} more rows</td></tr>`;
-      div.innerHTML=`<div style="font-weight:700;margin-bottom:12px;font-size:13px">📄 Source: "${name}" — ${sheet.rowCount} rows</div>
-        <table style="font-size:10.5px"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`;
-      ss.appendChild(div);
-    });
-  } else if(S.file?.type==='pdf'){
-    const div=mk('div','card au2');div.style.cssText='padding:18px;margin-bottom:12px';
-    div.innerHTML=`<div style="font-weight:700;margin-bottom:10px;font-size:13px">📄 PDF Preview — ${S.file.pages} pages</div>
-      <pre style="font-family:'JetBrains Mono';font-size:10.5px;color:var(--mu);line-height:1.7;white-space:pre-wrap;max-height:300px;overflow:auto">${(S.file.text??'').slice(0,2000)}</pre>`;
-    ss.appendChild(div);
-  }
-}
-function renderKpiTable(q){
-  const D=S.dash;
-  const tb=$('kpi-tbody');tb.innerHTML='';
-  (D.kpis??[]).filter(k=>!q||k.label?.toLowerCase().includes(q)||String(k.value).includes(q)).forEach((k,i)=>{
-    const tc=k.trend==='up'?'var(--a3)':k.trend==='down'?'var(--d)':'var(--mu)';
-    tb.innerHTML+=`<tr>
-      <td style="font-weight:500">${k.label}</td>
-      <td class="mono" style="color:var(--a)">${k.value}</td>
-      <td style="color:var(--mu)">${k.unit??''}</td>
-      <td>${k.trend==='up'?'▲ up':k.trend==='down'?'▼ down':'→ stable'}</td>
-      <td style="font-weight:700;color:${tc}">${k.change}</td></tr>`;
-  });
-}
-function filterKpiTbl(v){renderKpiTable(v.toLowerCase());}
-
-// ── CONTROLS ──────────────────────────────────────────────────────
-function togglePct(){
-  S.pctBars=!S.pctBars;
-  $('pct-btn').classList.toggle('on',S.pctBars);
-  renderKPIs();
-}
-function resetCtrl(){
-  S.pctBars=false;S.selKPI=null;
-  $('pct-btn').classList.remove('on');
-  $('thr-sl').value=0;$('thr-val').textContent='0';
-  renderKPIs();renderPrevCharts();
-}
-function onThresh(v){
-  $('thr-val').textContent=(+v).toLocaleString();
-  renderPrevCharts();
-}
-
-// ── EXPORTS ───────────────────────────────────────────────────────
-async function doExport(type){
-  const D=S.dash;if(!D)return;
-  const btns={xlsx:$('exp-xl'),pdf:$('exp-pdf'),pptx:$('exp-ppt')};
-  const orig={xlsx:'📊 Excel',pdf:'📄 PDF',pptx:'📑 PPTX'};
-  btns[type].disabled=true;btns[type].innerHTML='⏳ Exporting…';
-  try{
-    if(type==='xlsx')exportXlsx(D);
-    else if(type==='pdf')exportPdf(D);
-    else await exportPptx(D);
-    btns[type].innerHTML='✅ Done';
-  } catch(e){alert('Export failed: '+e.message);}
-  setTimeout(()=>{btns[type].disabled=false;btns[type].innerHTML=orig[type];},2500);
-}
-
-function exportXlsx(D){
-  const wb=XLSX.utils.book_new();
-  const a=(ws,n)=>XLSX.utils.book_append_sheet(wb,ws,n.slice(0,31));
-  const s1=XLSX.utils.aoa_to_sheet([
-    ['NEXUS ERP — AI Dashboard Report'],
-    ['Department',D.department?.toUpperCase()??''],['Title',D.title??''],
-    ['Period',D.period??''],['Generated',D.generatedAt??''],
-    [],['EXECUTIVE SUMMARY'],[D.executiveSummary??''],
-    [],['CFO NARRATIVE'],[D.narrative??''],
-  ]);
-  s1['!cols']=[{wch:22},{wch:90}];a(s1,'Executive Summary');
-  const s2=XLSX.utils.aoa_to_sheet([
-    ['#','Metric','Value','Unit','Trend','Change'],
-    ...(D.kpis??[]).map((k,i)=>[i+1,k.label,k.value,k.unit,k.trend,k.change]),
-  ]);
-  s2['!cols']=[{wch:4},{wch:30},{wch:16},{wch:12},{wch:10},{wch:16}];a(s2,'KPIs');
-  const cr=[['Chart','Label','Value','Secondary']];
-  (D.charts??[]).forEach(c=>{(c.data??[]).forEach(d=>cr.push([c.title,d.name,d.value,d.secondary??'']));cr.push([]);});
-  const s3=XLSX.utils.aoa_to_sheet(cr);s3['!cols']=[{wch:32},{wch:24},{wch:18},{wch:18}];a(s3,'Chart Data');
-  const s4=XLSX.utils.aoa_to_sheet([
-    ['TYPE','INSIGHT'],
-    ...(D.insights??[]).map(i=>[i.type?.toUpperCase(),(i.icon??'')+' '+i.text]),
-    [],['RECOMMENDATIONS'],
-    ...(D.recommendations??[]).map((r,i)=>['#'+(i+1),r]),
-  ]);
-  s4['!cols']=[{wch:16},{wch:90}];a(s4,'Insights');
-  if(S.file?.type==='excel'){
-    Object.entries(S.file.sheets).slice(0,4).forEach(([n,sh])=>{
-      if(sh.raw?.length)a(XLSX.utils.aoa_to_sheet(sh.raw),'Src: '+n);
-    });
-  }
-  XLSX.writeFile(wb,'nexus-'+D.department+'-'+Date.now()+'.xlsx');
-}
-
-function exportPdf(D){
-  const dept=DEPTS.find(d=>d.id===D.department)||DEPTS[0];
-  const kH=(D.kpis??[]).map((k,i)=>`<div style="display:inline-block;vertical-align:top;width:calc(25% - 10px);margin:5px;background:#f8faff;border-radius:10px;padding:14px 12px;border-top:3px solid ${C[i%12]}">
-    <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#6b7280;margin-bottom:5px">${k.label}</div>
-    <div style="font-size:22px;font-weight:800;color:#111">${k.value}<span style="font-size:11px;color:#9ca3af">${k.unit&&k.unit!=='units'?' '+k.unit:''}</span></div>
-    <div style="font-size:11px;margin-top:3px;font-weight:700;color:${k.trend==='up'?'#10b981':k.trend==='down'?'#ef4444':'#6b7280'}">${k.trend==='up'?'▲':k.trend==='down'?'▼':'→'} ${k.change}</div>
-  </div>`).join('');
-  const iH=(D.insights??[]).map(i=>`<div style="padding:9px 13px;margin:5px 0;border-left:3px solid ${i.type==='positive'?'#10b981':i.type==='negative'?'#ef4444':i.type==='alert'?'#f97316':'#3b82f6'};background:#f9fafb;border-radius:0 7px 7px 0;font-size:12px;line-height:1.6">
-    <b style="font-size:9px;text-transform:uppercase;color:${i.type==='positive'?'#10b981':i.type==='negative'?'#ef4444':i.type==='alert'?'#f97316':'#3b82f6'}">${i.type}</b>
-    <p style="margin:2px 0 0;color:#374151">${i.icon??'📊'} ${i.text}</p></div>`).join('');
-  const rH=(D.recommendations??[]).map((r,i)=>`<div style="display:flex;gap:9px;padding:9px 11px;margin:5px 0;background:#f0fdf4;border-radius:7px;font-size:12px">
-    <span style="background:#10b981;color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;flex-shrink:0">${i+1}</span><span>${r}</span></div>`).join('');
-  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${D.title??'Report'}</title>
-<style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;color:#111;font-size:13px}
-.w{max-width:1050px;margin:0 auto;padding:36px 44px}
-h2{font-size:14px;font-weight:700;color:#1d4ed8;margin:20px 0 9px;border-bottom:1.5px solid #dbeafe;padding-bottom:4px}
-@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.np{display:none}@page{margin:1.2cm;size:A4}}</style></head>
-<body><div class="w">
-<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;padding-bottom:16px;border-bottom:3px solid #1d4ed8">
-  <div>
-    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#6b7280">${dept.icon} ${dept.label?.toUpperCase()}</div>
-    <h1 style="margin:4px 0;font-size:22px;font-weight:800">${D.title}</h1>
-    <div style="color:#6b7280;font-size:11px">Period: ${D.period} · ${D.generatedAt}</div>
-  </div>
-  <div style="background:#1d4ed8;color:#fff;padding:12px 18px;border-radius:9px;text-align:center">
-    <div style="font-size:9px;opacity:.8">NEXUS ERP</div><div style="font-size:15px;font-weight:800">AI REPORT</div></div>
-</div>
-<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:14px 17px;margin-bottom:18px;font-size:13px;line-height:1.8;color:#1e3a5f"><b>Executive Summary:</b> ${D.executiveSummary}</div>
-<h2>📊 KPIs</h2><div>${kH}</div><div style="clear:both;height:8px"></div>
-<h2>💡 Insights</h2>${iH}
-<h2>🎯 Recommendations</h2>${rH}
-<h2>📝 CFO Narrative</h2><p style="line-height:1.9;background:#f9fafb;padding:13px;border-radius:8px">${D.narrative}</p>
-<div style="margin-top:32px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;display:flex;justify-content:space-between">
-  <span>NEXUS ERP · Power BI × AI</span><span>Confidential · ${D.generatedAt}</span></div>
-</div>
-<div class="np" style="text-align:center;padding:16px;background:#f3f4f6;border-top:1px solid #e5e7eb">
-  <button onclick="window.print()" style="padding:11px 26px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-right:8px">🖨️ Save as PDF</button>
-  <button onclick="window.close()" style="padding:11px 18px;background:#e5e7eb;color:#374151;border:none;border-radius:8px;cursor:pointer">✕ Close</button>
-</div></body></html>`;
-  const w=window.open('','_blank','width=1100,height=800');
-  if(w){w.document.write(html);w.document.close();}
-  else alert('Pop-up blocked — please allow pop-ups for this site and retry.');
-}
-
-async function exportPptx(D){
-  try{await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundled.js');}
-  catch{throw new Error('Could not load PptxGenJS — check internet connection.');}
-  if(!window.PptxGenJS)throw new Error('PptxGenJS failed to load.');
-  const pptx=new window.PptxGenJS();
-  pptx.layout='LAYOUT_WIDE';pptx.title=D.title;
-  const dept=DEPTS.find(d=>d.id===D.department)||DEPTS[0];
-  const BG='060A12',CD='0C1422',BR='1A2B40',AC='00D4FF',PU='7C3AED',GR='10B981',MU='4A6585',WH='E2EBF6',WA='F59E0B';
-  const cc=['00D4FF','7C3AED','10B981','F59E0B','F97316','EF4444','06D6A0','3B82F6'];
-  const hdr=(s,lbl,col=AC)=>{
-    s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:13.33,h:1.05,fill:{color:CD},line:{color:CD}});
-    s.addText(lbl,{x:.45,y:.15,w:12,fontSize:10,bold:true,color:col,charSpacing:5});
-    s.addText(D.title,{x:.45,y:.45,w:12,fontSize:17,bold:true,color:WH});
-  };
-  // Slide 1 — Title
-  const s1=pptx.addSlide();s1.background={color:BG};
-  s1.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:'100%',fill:{color:CD},line:{color:CD}});
-  s1.addShape(pptx.ShapeType.rect,{x:0,y:3.65,w:13.33,h:.05,fill:{color:AC},line:{color:AC}});
-  s1.addShape(pptx.ShapeType.rect,{x:0,y:0,w:.12,h:7.5,fill:{color:AC},line:{color:AC}});
-  s1.addText('NEXUS ERP · AI DASHBOARD INTELLIGENCE',{x:.35,y:.3,w:10,fontSize:10,bold:true,color:AC,charSpacing:5});
-  s1.addText(`${dept.icon}  ${dept.label?.toUpperCase()} DEPARTMENT`,{x:.35,y:.65,w:9,fontSize:10,bold:true,color:MU,charSpacing:3});
-  s1.addText(D.title,{x:.35,y:1.1,w:11.2,fontSize:32,bold:true,color:WH});
-  s1.addText(`Period: ${D.period}  ·  ${D.generatedAt}`,{x:.35,y:3.2,w:9,fontSize:11,color:MU});
-  s1.addText(D.summary??'',{x:.35,y:4.05,w:12.5,fontSize:13,color:'8BA5C0',lineSpacingMultiple:1.45});
-  // Slide 2 — KPIs
-  const s2=pptx.addSlide();s2.background={color:BG};
-  hdr(s2,'KEY PERFORMANCE INDICATORS',AC);
-  (D.kpis??[]).slice(0,8).forEach((k,i)=>{
-    const col=i%4,row=Math.floor(i/4),x=.3+col*3.15,y=1.2+row*1.55;
-    s2.addShape(pptx.ShapeType.rect,{x,y,w:2.95,h:1.38,fill:{color:CD},line:{color:BR,width:.8},rounding:true});
-    s2.addShape(pptx.ShapeType.rect,{x,y,w:2.95,h:.05,fill:{color:cc[i%8]},line:{color:cc[i%8]},rounding:true});
-    s2.addText(k.label?.toUpperCase()??'',{x:x+.14,y:y+.12,w:2.67,fontSize:7.5,bold:true,color:MU,charSpacing:1.5});
-    s2.addText(`${k.value}${k.unit&&k.unit!=='units'?' '+k.unit:''}`,{x:x+.12,y:y+.33,w:2.71,fontSize:21,bold:true,color:WH});
-    s2.addText(`${k.trend==='up'?'▲':k.trend==='down'?'▼':'→'}  ${k.change??''}`,{x:x+.12,y:y+1.04,w:2.71,fontSize:11,bold:true,color:k.trend==='up'?GR:k.trend==='down'?'EF4444':MU});
-  });
-  // Slide 3 — Chart Data
-  const s3=pptx.addSlide();s3.background={color:BG};
-  hdr(s3,'ANALYTICS & CHART DATA',PU);
-  [{x:.3,y:1.15},{x:6.85,y:1.15},{x:.3,y:4.1},{x:6.85,y:4.1}].forEach((pos,ci)=>{
-    const chart=(D.charts??[])[ci];if(!chart)return;
-    s3.addShape(pptx.ShapeType.rect,{x:pos.x,y:pos.y,w:6.2,h:2.75,fill:{color:CD},line:{color:BR,width:.8},rounding:true});
-    s3.addText(chart.title??'',{x:pos.x+.18,y:pos.y+.13,w:5.84,fontSize:11,bold:true,color:WH});
-    const hRow=[{text:'Category',options:{fontSize:8,bold:true,color:AC,fill:{color:'0D1828'},border:{pt:.5,color:BR}}},{text:'Value',options:{fontSize:8,bold:true,color:AC,fill:{color:'0D1828'},align:'right',border:{pt:.5,color:BR}}}];
-    const dRows=(chart.data??[]).slice(0,7).map((d,ri)=>[
-      {text:String(d.name??''),options:{fontSize:8,color:'8BA5C0',fill:{color:ri%2===0?CD:'0D1828'},border:{pt:.5,color:BR}}},
-      {text:String(d.value??''),options:{fontSize:8.5,bold:true,color:WH,align:'right',fill:{color:ri%2===0?CD:'0D1828'},border:{pt:.5,color:BR}}},
-    ]);
-    if(dRows.length)s3.addTable([hRow,...dRows],{x:pos.x+.18,y:pos.y+.5,w:5.84,rowH:.27,border:{pt:.5,color:BR}});
-  });
-  // Slide 4 — Insights
-  const s4=pptx.addSlide();s4.background={color:BG};
-  hdr(s4,'AI-DETECTED INSIGHTS',GR);
-  [{x:.3,y:1.15},{x:6.85,y:1.15},{x:.3,y:2.65},{x:6.85,y:2.65},{x:.3,y:4.15},{x:6.85,y:4.15}].forEach((pos,i)=>{
-    const ins=(D.insights??[])[i];if(!ins)return;
-    const bc=ins.type==='positive'?GR:ins.type==='negative'?'EF4444':ins.type==='alert'?WA:AC;
-    s4.addShape(pptx.ShapeType.rect,{x:pos.x,y:pos.y,w:6.2,h:1.25,fill:{color:'0E1C2F'},line:{color:bc,width:1.5},rounding:true});
-    s4.addShape(pptx.ShapeType.rect,{x:pos.x,y:pos.y,w:.07,h:1.25,fill:{color:bc},line:{color:bc}});
-    s4.addText((ins.type??'info').toUpperCase(),{x:pos.x+.22,y:pos.y+.1,w:1.8,fontSize:8,bold:true,color:bc,charSpacing:2});
-    s4.addText(`${ins.icon??'📊'} ${ins.text??''}`,{x:pos.x+.2,y:pos.y+.35,w:5.85,fontSize:10,color:'C0D0E0',lineSpacingMultiple:1.35});
-  });
-  // Slide 5 — Recommendations
-  const s5=pptx.addSlide();s5.background={color:BG};
-  hdr(s5,'STRATEGIC RECOMMENDATIONS',WA);
-  (D.recommendations??[]).slice(0,5).forEach((rec,i)=>{
-    const y=1.18+i*1.1;
-    s5.addShape(pptx.ShapeType.rect,{x:.3,y,w:12.73,h:1.0,fill:{color:CD},line:{color:BR},rounding:true});
-    s5.addShape(pptx.ShapeType.ellipse,{x:.44,y:y+.22,w:.54,h:.54,fill:{color:'0D2144'},line:{color:AC,width:1.5}});
-    s5.addText(String(i+1),{x:.44,y:y+.25,w:.54,fontSize:14,bold:true,color:AC,align:'center'});
-    s5.addText(rec,{x:1.15,y:y+.18,w:11.68,fontSize:12,color:'C0D0E0',lineSpacingMultiple:1.35});
-  });
-  // Slide 6 — Exec Close
-  const s6=pptx.addSlide();s6.background={color:'06080F'};
-  s6.addShape(pptx.ShapeType.rect,{x:0,y:0,w:13.33,h:3.75,fill:{color:'0C1120'},line:{color:'0C1120'}});
-  s6.addShape(pptx.ShapeType.rect,{x:0,y:3.75,w:13.33,h:.05,fill:{color:AC},line:{color:AC}});
-  s6.addText('CFO EXECUTIVE NARRATIVE',{x:.5,y:.3,w:12,fontSize:10,bold:true,color:AC,charSpacing:6});
-  s6.addText(D.executiveSummary??'',{x:.5,y:.68,w:12.33,fontSize:13,color:WH,lineSpacingMultiple:1.6});
-  s6.addText('NEXUS ERP · AI Dashboard Intelligence · CONFIDENTIAL',{x:.5,y:7.1,w:12.33,fontSize:8.5,color:'2A3A50',align:'center'});
-  await pptx.writeFile({fileName:'nexus-'+D.department+'-deck-'+Date.now()+'.pptx'});
-}
-
-// ── RESET ─────────────────────────────────────────────────────────
-function resetApp(){
-  S.dept=null;S.file=null;S.rawText='';S.dash=null;
-  S.chartInst={};S.chartTypes={};S.selIdx=0;S.range=100;S.selKPI=null;S.pctBars=false;
-  $('paste').value='';$('file-ok').classList.remove('on');
-  $('dept-row').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
-  $('gen-btn').disabled=true;$('new-btn').style.display='none';
-  showErr('');showScr('input');
-  // reset tabs
+  // Reset to Overview tab
   document.querySelectorAll('#tab-bar .tab').forEach(t=>t.classList.remove('on'));
   document.querySelectorAll('.tpanel').forEach(t=>t.classList.remove('on'));
   document.querySelector('#tab-bar .tab[data-p="overview"]').classList.add('on');
   $('p-overview').classList.add('on');
   S.tab='overview';
+
+  // Demo vs full tab appearance
+  ['viz','ins','rep','data'].forEach(p=>{
+    const t=$('tab-'+({'viz':'viz','ins':'insights','rep':'report','data':'data'}[p]));
+    if(!t)return;
+    if(isDemo){t.style.opacity='0.45';t.title='Add API key to unlock';}
+    else{t.style.opacity='';t.title='';}
+  });
+
+  // Demo strip + teaser
+  $('demo-strip').style.display=isDemo?'flex':'none';
+  $('demo-teaser').style.display=isDemo?'block':'none';
+  $('dash-exp').style.display=isDemo?'none':'flex';
+  $('ctrl-card').style.display=isDemo?'none':'block';
+
+  // Header
+  $('dash-badges').innerHTML=
+    '<span class="badge" style="background:'+dept.col+'18;color:'+dept.col+';border:1px solid '+dept.col+'44">'+dept.icon+' '+dept.label+'</span>'+
+    (isDemo
+      ? '<span class="badge" style="background:rgba(16,185,129,.12);color:var(--a3);border:1px solid rgba(16,185,129,.35)">✨ Free Demo</span>'
+      : '<span class="badge" style="background:rgba(0,212,255,.08);color:var(--a);border:1px solid rgba(0,212,255,.25)">⚡ AI Generated</span>')
+    +(S.file?'<span class="badge" style="background:rgba(16,185,129,.1);color:var(--a3);border:1px solid rgba(16,185,129,.3)">📁 '+S.file.fileName+'</span>':'');
+  $('dash-title').textContent=D.title;
+  $('dash-period').textContent='Period: '+D.period+' · Generated '+D.generatedAt;
+
+  // Summary bar
+  $('sum-txt').textContent=D.summary;
+  if(D.dataQuality){
+    $('q-badge').style.display='flex';
+    $('q-pct').textContent=D.dataQuality.score+'%';
+    $('q-pct').style.color=D.dataQuality.score>80?'var(--a3)':'var(--w)';
+    $('q-comp').textContent=D.dataQuality.completeness;
+  }else{$('q-badge').style.display='none';}
+
+  // Controls (full mode only)
+  if(!isDemo){
+    let mx=0;(D.charts||[]).slice(0,2).forEach(c=>(c.data||[]).forEach(d=>{if(+d.value>mx)mx=+d.value;}));mx=mx||100;
+    $('thr-sl').max=mx;$('thr-sl').value=0;$('thr-max').textContent=mx.toLocaleString(undefined,{maximumFractionDigits:0});$('thr-val').textContent='0';
+    const kc=$('kpi-chips');kc.innerHTML='';
+    (D.kpis||[]).slice(0,8).forEach((k,i)=>{
+      const b=mk('button','ctype');b.style.cssText='font-size:10px;padding:3px 8px';b.textContent=k.label;
+      b.onclick=()=>{S.ksel=S.ksel===i?null:i;renderKPIs();};kc.appendChild(b);
+    });
+  }
+
+  renderKPIs();
+  renderPrevCharts(isDemo);
+  if(!isDemo){renderInsights();renderReport();renderDataTab();}
+}
+
+// ── KPI Cards ──────────────────────────────────────────────────────
+function renderKPIs(){
+  const D=S.dash;const g=$('kpi-grid');g.innerHTML='';
+  (D.kpis||[]).forEach((k,i)=>{
+    const div=mk('div','kpi-c au');div.style.cssText='animation-delay:'+i*.04+'s;border-top:2.5px solid '+PAL[i%12];
+    if(S.ksel===i)div.classList.add('sel');
+    const tr=k.trend==='up'?'up':k.trend==='down'?'down':'stable';
+    const ti=k.trend==='up'?'▲':k.trend==='down'?'▼':'→';
+    const bw=S.pct?Math.min(100,Math.abs(parseFloat(k.change)||50))+'%':'55%';
+    const unit=k.unit&&k.unit!=='units'?'<span style="font-size:11px;color:var(--mu);font-weight:400"> '+k.unit+'</span>':'';
+    div.innerHTML='<div class="kpi-bar"><div class="kpi-fill" style="background:'+PAL[i%12]+';width:'+bw+'"></div></div><div class="kpi-lbl">'+k.label+'</div><div class="kpi-val">'+k.value+unit+'</div><div class="kpi-chg '+tr+'">'+ti+' '+k.change+'</div>';
+    div.onclick=()=>{S.ksel=S.ksel===i?null:i;renderKPIs();};g.appendChild(div);
+  });
+}
+
+// ── Chart.js ───────────────────────────────────────────────────────
+function deepOpts(){
+  return {
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{labels:{color:'#4A6585',font:{family:"'DM Sans',sans-serif",size:11}}},
+      tooltip:{backgroundColor:'#0C1422',borderColor:'#1A2B40',borderWidth:1,titleColor:'#E2EBF6',bodyColor:'#4A6585',titleFont:{family:"'JetBrains Mono',monospace"},bodyFont:{family:"'DM Sans',sans-serif"}}
+    },
+    scales:{
+      x:{grid:{color:'rgba(26,43,64,.55)'},ticks:{color:'#4A6585',font:{family:"'DM Sans',sans-serif",size:10},maxRotation:45}},
+      y:{grid:{color:'rgba(26,43,64,.55)'},ticks:{color:'#4A6585',font:{family:"'DM Sans',sans-serif",size:10}}}
+    }
+  };
+}
+function radialOpts(){return {r:{grid:{color:'rgba(26,43,64,.6)'},pointLabels:{color:'#4A6585',font:{family:"'DM Sans',sans-serif",size:10}},ticks:{display:false}}};}
+
+function destroyChart(id){if(S.ci[id]){try{S.ci[id].destroy();}catch(e){}delete S.ci[id];}}
+
+function makeChart(canvasId,chartObj,hpx){
+  destroyChart(canvasId);
+  const canvas=$(canvasId);if(!canvas)return;
+  if(hpx&&canvas.parentElement)canvas.parentElement.style.height=hpx+'px';
+  const data=(chartObj&&chartObj.data)||[];
+  const type=(chartObj&&chartObj.type)||'bar';
+  const labels=data.map(d=>String(d.name||''));
+  const vals=data.map(d=>+d.value||0);
+  const sec=data.map(d=>d.secondary!=null?+d.secondary:null);
+  const hasSec=sec.some(v=>v!==null);
+  const c0=PAL[0],c1=PAL[1];
+  let cfg;
+
+  if(type==='pie'||type==='donut'){
+    const o=deepOpts();o.scales={x:{display:false},y:{display:false}};o.cutout=type==='donut'?'55%':'0%';
+    cfg={type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:PAL.slice(0,vals.length),borderWidth:0,hoverOffset:5}]},options:o};
+  }else if(type==='polarArea'){
+    const o=deepOpts();o.scales={r:{...radialOpts().r,ticks:{color:'#4A6585',font:{size:9}}}};
+    cfg={type:'polarArea',data:{labels,datasets:[{data:vals,backgroundColor:PAL.map(c=>c+'BB'),borderColor:PAL,borderWidth:1}]},options:o};
+  }else if(type==='radar'){
+    const o=deepOpts();o.scales=radialOpts();
+    const ds=[{label:'Value',data:vals,borderColor:c0,backgroundColor:c0+'28',borderWidth:2,pointRadius:3,pointBackgroundColor:c0}];
+    if(hasSec)ds.push({label:'Target',data:sec,borderColor:c1,backgroundColor:c1+'18',borderWidth:2,borderDash:[5,4],pointRadius:3});
+    cfg={type:'radar',data:{labels,datasets:ds},options:o};
+  }else if(type==='scatter'||type==='bubble'){
+    const maxV=Math.max(1,...vals.map(Math.abs));
+    const pts=data.map(d=>({x:+d.value||0,y:+d.secondary||0,r:type==='bubble'?Math.max(5,Math.min(22,Math.abs(+d.value||0)/maxV*20)):6}));
+    cfg={type:'bubble',data:{datasets:[{label:'Points',data:pts,backgroundColor:c0+'99',borderColor:c0,borderWidth:1}]},options:deepOpts()};
+  }else if(type==='area'){
+    const ds=[{label:'Value',data:vals,borderColor:c0,backgroundColor:c0+'33',fill:true,tension:.4,pointRadius:3,pointBackgroundColor:c0,borderWidth:2.5}];
+    if(hasSec)ds.push({label:'Target',data:sec,borderColor:c1,backgroundColor:'transparent',fill:false,tension:.4,pointRadius:3,pointBackgroundColor:c1,borderDash:[5,4],borderWidth:2});
+    cfg={type:'line',data:{labels,datasets:ds},options:deepOpts()};
+  }else if(type==='line'){
+    const ds=[{label:'Value',data:vals,borderColor:c0,backgroundColor:'transparent',tension:.4,pointRadius:3.5,pointBackgroundColor:c0,borderWidth:2.5}];
+    if(hasSec)ds.push({label:'Target',data:sec,borderColor:c1,backgroundColor:'transparent',tension:.4,pointRadius:3,pointBackgroundColor:c1,borderDash:[5,4],borderWidth:2});
+    cfg={type:'line',data:{labels,datasets:ds},options:deepOpts()};
+  }else if(type==='combo'){
+    const ds=[{type:'bar',label:'Value',data:vals,backgroundColor:c0+'BB',borderColor:c0,borderRadius:4}];
+    if(hasSec)ds.push({type:'line',label:'Target',data:sec,borderColor:c1,backgroundColor:'transparent',tension:.4,pointRadius:3,borderDash:[5,4],borderWidth:2});
+    cfg={type:'bar',data:{labels,datasets:ds},options:deepOpts()};
+  }else if(type==='hbar'){
+    const o=deepOpts();o.indexAxis='y';
+    cfg={type:'bar',data:{labels,datasets:[{label:'Value',data:vals,backgroundColor:PAL.map(c=>c+'CC'),borderRadius:4}]},options:o};
+  }else if(type==='stacked'){
+    const o=deepOpts();o.scales.x.stacked=true;o.scales.y.stacked=true;
+    const ds=[{label:'Value',data:vals,backgroundColor:c0+'CC',stack:'s'}];
+    if(hasSec)ds.push({label:'Secondary',data:sec,backgroundColor:c1+'BB',stack:'s'});
+    cfg={type:'bar',data:{labels,datasets:ds},options:o};
+  }else if(type==='waterfall'){
+    let run=0;const bases=[],heights=[];
+    data.forEach((d,i)=>{const v=+d.value||0;bases.push(i===0?0:run);heights.push(v);if(i===0)run=v;else run+=v;});
+    const bgc=heights.map(v=>v>=0?'#10B98199':'#EF444499');
+    const o=deepOpts();o.plugins.legend={display:false};o.scales.x.stacked=true;o.scales.y.stacked=true;
+    cfg={type:'bar',data:{labels,datasets:[{label:'Base',data:bases,backgroundColor:'transparent',stack:'w'},{label:'Value',data:heights,backgroundColor:bgc,borderRadius:4,stack:'w'}]},options:o};
+  }else{
+    // default: bar
+    const ds=[{label:'Value',data:vals,backgroundColor:PAL.map((_,i)=>PAL[i%PAL.length]+'CC'),borderRadius:5}];
+    if(hasSec)ds.push({label:'Target',data:sec,backgroundColor:c1+'99',borderRadius:5});
+    cfg={type:'bar',data:{labels,datasets:ds},options:deepOpts()};
+  }
+  try{S.ci[canvasId]=new Chart(canvas.getContext('2d'),cfg);}
+  catch(e){console.warn('Chart build error',canvasId,type,e.message);}
+}
+
+// ── Preview Charts (Overview) ──────────────────────────────────────
+function renderPrevCharts(isDemo){
+  [0,1].forEach(i=>destroyChart('pc'+i));
+  const D=S.dash;const wrap=$('prev-charts');wrap.innerHTML='';
+  const thr=isDemo?0:(+$('thr-sl').value||0);
+  const count=isDemo?2:2;
+  (D.charts||[]).slice(0,count).forEach((c,i)=>{
+    const card=mk('div','card au1');card.style.cssText='padding:20px;animation-delay:'+(i*.07)+'s';
+    const cid='pc'+i;
+    card.innerHTML='<div style="font-weight:700;font-size:14px;margin-bottom:2px">'+c.title+'</div><div style="font-size:11.5px;color:var(--mu);margin-bottom:14px">'+(c.subtitle||'')+'</div><div style="height:200px;position:relative"><canvas id="'+cid+'"></canvas></div>';
+    wrap.appendChild(card);
+    const fd={...c,data:thr>0?(c.data||[]).filter(d=>+d.value>=thr):(c.data||[])};
+    requestAnimationFrame(()=>makeChart(cid,fd,200));
+  });
+}
+
+// ── Viz Tab (full mode) ────────────────────────────────────────────
+function renderVizTypePanel(){
+  const g=$('viz-type-list');g.innerHTML='';
+  const cats=S.vcat==='all'?Object.keys(VCATS):[S.vcat];
+  cats.forEach(cat=>{
+    const items=VCATS[cat];if(!items)return;
+    if(S.vcat==='all'){const l=mk('div','vcat-lbl');l.textContent=cat;g.appendChild(l);}
+    const grid=mk('div','vgrid');
+    items.forEach(tid=>{
+      const m=VMETA[tid];if(!m)return;
+      const chart=(S.dash&&S.dash.charts||[])[S.sidx];
+      const cur=chart?(S.ct[chart.id]||chart.type||'bar'):'bar';
+      const b=mk('button','vbtn'+(cur===tid?' on':''));
+      b.innerHTML='<span class="vbtn-ico">'+m.i+'</span><span class="vbtn-lbl">'+m.l+'</span>';
+      b.onclick=()=>{if(chart)S.ct[chart.id]=tid;renderVizTypePanel();renderMainChart();renderMiniGrid();};
+      grid.appendChild(b);
+    });
+    g.appendChild(grid);
+  });
+}
+function renderVizTab(){
+  const D=S.dash;if(!D)return;
+  const ct=$('chart-sel-tabs');ct.innerHTML='';
+  (D.charts||[]).forEach((c,i)=>{
+    const b=mk('button','ctype'+(S.sidx===i?' on':''));b.style.cssText='font-size:11px;padding:5px 12px';
+    b.textContent=(i+1)+': '+(c.title||'').slice(0,22);b.onclick=()=>{S.sidx=i;renderVizTab();};ct.appendChild(b);
+  });
+  renderVizTypePanel();renderMainChart();renderMiniGrid();
+}
+function renderMainChart(){
+  const D=S.dash;if(!D)return;
+  const chart=(D.charts||[])[S.sidx];if(!chart)return;
+  const type=S.ct[chart.id]||chart.type||'bar';
+  const m=VMETA[type]||{l:type,i:'▌'};
+  $('mc-title').textContent=chart.title||'';$('mc-sub').textContent=chart.subtitle||'';
+  $('mc-badge').innerHTML='<span style="font-family:\'JetBrains Mono\';font-size:11px;color:var(--a)">'+m.i+'</span><span style="font-size:10.5px;color:var(--a);font-weight:600"> '+m.l+'</span>';
+  const allData=chart.data||[];const n=Math.max(2,Math.round(allData.length*S.range/100));
+  $('range-pts').textContent=n+'/'+allData.length+' pts';
+  makeChart('main-cv',{...chart,type,data:allData.slice(0,n)},320);
+}
+function renderMiniGrid(){
+  const D=S.dash;if(!D)return;
+  (D.charts||[]).forEach((_,i)=>destroyChart('mc'+i));
+  const g=$('mini-grid');g.innerHTML='';
+  (D.charts||[]).forEach((c,i)=>{
+    const div=mk('div','card mini-c'+(S.sidx===i?' on':''));
+    const cid='mc'+i;
+    div.innerHTML='<div style="font-weight:600;font-size:12.5px;margin-bottom:10px;display:flex;justify-content:space-between"><span>'+c.title+'</span><span style="font-size:10px;color:var(--mu)">'+(S.ct[c.id]||c.type)+'</span></div><div style="height:130px;position:relative"><canvas id="'+cid+'"></canvas></div>';
+    div.onclick=()=>{S.sidx=i;renderVizTab();};g.appendChild(div);
+    requestAnimationFrame(()=>makeChart(cid,{...c,type:S.ct[c.id]||c.type||'bar'},130));
+  });
+}
+function onRange(v){S.range=+v;renderMainChart();}
+
+// ── Insights (full mode) ───────────────────────────────────────────
+const IC={positive:'#10B981',negative:'#EF4444',alert:'#F59E0B',neutral:'#00D4FF'};
+function renderInsights(){
+  const D=S.dash;
+  const fr=$('ins-filter-row');fr.innerHTML='';
+  ['all','positive','negative','alert','neutral'].forEach(f=>{
+    const b=mk('button','chip'+(S.insF===f?' on':''));b.textContent=f;
+    b.onclick=()=>{S.insF=f;fr.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));b.classList.add('on');renderInsList();};
+    fr.appendChild(b);
+  });
+  renderInsList();
+  const rl=$('rec-list');rl.innerHTML='';
+  (D.recommendations||[]).forEach((r,i)=>{
+    const d=mk('div','rec-c au');d.style.animationDelay=(i*.06)+'s';
+    d.innerHTML='<div class="rec-n">'+(i+1)+'</div><div style="font-size:13.5px;line-height:1.65">'+r+'</div>';
+    rl.appendChild(d);
+  });
+  if(D.dataQuality){
+    $('q-card').style.display='block';
+    $('q-bar-fill').style.width=D.dataQuality.score+'%';
+    $('q-score').textContent=D.dataQuality.score+'%';
+    $('q-compl').textContent='Completeness: '+D.dataQuality.completeness;
+    const qi=$('q-issues');qi.innerHTML='';
+    (D.dataQuality.issues||[]).forEach(iss=>{const d=mk('div');d.style.cssText='font-size:12px;color:var(--w);margin-top:5px';d.textContent='⚠ '+iss;qi.appendChild(d);});
+  }
+}
+function renderInsList(){
+  const D=S.dash;
+  const shown=(D.insights||[]).filter(ins=>S.insF==='all'||ins.type===S.insF);
+  $('ins-count').textContent=shown.length+' insights';
+  const il=$('ins-list');il.innerHTML='';
+  shown.forEach((ins,i)=>{
+    const col=IC[ins.type]||'#00D4FF';
+    const d=mk('div','ins-c au');d.style.animationDelay=(i*.05)+'s';d.style.borderLeftColor=col;
+    d.innerHTML='<span style="font-size:20px;flex-shrink:0">'+(ins.icon||'📊')+'</span><div><span class="ins-badge" style="background:'+col+'22;color:'+col+'">'+(ins.type||'info')+'</span><div class="ins-txt">'+ins.text+'</div></div>';
+    il.appendChild(d);
+  });
+  if(!shown.length){const d=mk('div');d.style.cssText='color:var(--mu);padding:20px 0;font-size:13px';d.textContent='No insights match this filter.';il.appendChild(d);}
+}
+
+// ── Report (full mode) ─────────────────────────────────────────────
+function renderReport(){
+  const D=S.dash;
+  $('exec-period').textContent='Period: '+D.period;
+  $('exec-summary').textContent=D.executiveSummary||'';
+  $('exec-narr').textContent=D.narrative||'';
+  const rg=$('kpi-rep-grid');rg.innerHTML='';
+  (D.kpis||[]).slice(0,8).forEach(k=>{
+    const d=mk('div','kpi-rep');
+    const tc=k.trend==='up'?'var(--a3)':k.trend==='down'?'var(--d)':'var(--mu)';
+    const ti=k.trend==='up'?'📈':k.trend==='down'?'📉':'➡️';
+    d.innerHTML='<div><div style="font-size:10.5px;color:var(--mu);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">'+k.label+'</div><div class="mono" style="font-weight:800;font-size:20px">'+k.value+(k.unit&&k.unit!=='units'?' <span style="font-size:12px;color:var(--mu);font-weight:400">'+k.unit+'</span>':'')+'</div></div><div style="text-align:right"><div style="font-size:20px">'+ti+'</div><div style="font-size:12px;font-weight:700;color:'+tc+'">'+k.change+'</div></div>';
+    rg.appendChild(d);
+  });
+}
+
+// ── Data Tab (full mode) ───────────────────────────────────────────
+function renderDataTab(){
+  const D=S.dash;renderKpiTable('');
+  const cg=$('cdata-grid');cg.innerHTML='';
+  (D.charts||[]).forEach(c=>{
+    const div=mk('div','card');div.style.padding='16px';
+    const hasSec=(c.data||[]).some(d=>d.secondary!=null);
+    let rows='';(c.data||[]).forEach(row=>{rows+='<tr><td>'+row.name+'</td><td class="mono" style="text-align:right;color:var(--a)">'+row.value+'</td>'+(hasSec?'<td class="mono" style="text-align:right;color:var(--a2)">'+(row.secondary!=null?row.secondary:'')+'</td>':'')+'</tr>';});
+    div.innerHTML='<div style="font-weight:600;margin-bottom:10px;font-size:13px">'+c.title+'</div><div style="overflow-x:auto"><table><thead><tr><th>Label</th><th style="text-align:right">Value</th>'+(hasSec?'<th style="text-align:right">Secondary</th>':'')+'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+    cg.appendChild(div);
+  });
+  const ss=$('src-sheets');ss.innerHTML='';
+  if(S.file&&S.file.type==='excel'){
+    Object.entries(S.file.sheets).forEach(([name,sheet])=>{
+      const div=mk('div','card');div.style.cssText='padding:18px;margin-bottom:12px;overflow-x:auto';
+      let ths='',trs='';
+      (sheet.raw[0]||[]).forEach(h=>{ths+='<th>'+String(h||'?')+'</th>';});
+      sheet.raw.slice(1,20).forEach(row=>{trs+='<tr>';row.forEach(cell=>{trs+='<td class="mono" style="white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis">'+String(cell==null?'':cell)+'</td>';});trs+='</tr>';});
+      if(sheet.raw.length>20)trs+='<tr><td colspan="'+(sheet.raw[0]||[]).length+'" style="color:var(--mu)">…'+(sheet.raw.length-20)+' more rows</td></tr>';
+      div.innerHTML='<div style="font-weight:700;margin-bottom:12px;font-size:13px">📄 "'+name+'" — '+sheet.rowCount+' rows</div><table style="font-size:10.5px"><thead><tr>'+ths+'</tr></thead><tbody>'+trs+'</tbody></table>';
+      ss.appendChild(div);
+    });
+  }
+}
+function renderKpiTable(q){
+  const D=S.dash;const tb=$('kpi-tbody');tb.innerHTML='';
+  (D.kpis||[]).filter(k=>!q||k.label.toLowerCase().includes(q)||String(k.value).includes(q)).forEach(k=>{
+    const tc=k.trend==='up'?'var(--a3)':k.trend==='down'?'var(--d)':'var(--mu)';
+    tb.innerHTML+='<tr><td style="font-weight:500">'+k.label+'</td><td class="mono" style="color:var(--a)">'+k.value+'</td><td style="color:var(--mu)">'+(k.unit||'')+'</td><td>'+(k.trend==='up'?'▲ up':k.trend==='down'?'▼ down':'→ stable')+'</td><td style="font-weight:700;color:'+tc+'">'+k.change+'</td></tr>';
+  });
+}
+function filterKpiTbl(v){renderKpiTable(v.toLowerCase());}
+
+// ── Overview Controls ──────────────────────────────────────────────
+function togglePct(){S.pct=!S.pct;$('pct-btn').classList.toggle('on',S.pct);renderKPIs();}
+function resetCtrl(){S.pct=false;S.ksel=null;$('pct-btn').classList.remove('on');$('thr-sl').value=0;$('thr-val').textContent='0';renderKPIs();renderPrevCharts(false);}
+function onThresh(v){$('thr-val').textContent=(+v).toLocaleString();renderPrevCharts(false);}
+
+// ── Exports (full mode only) ───────────────────────────────────────
+async function doExport(type){
+  const D=S.dash;if(!D)return;
+  const lbls={xlsx:'📊 Excel',pdf:'📄 PDF',pptx:'📑 PPTX'};
+  const btn=$('exp-'+type.replace('xlsx','xl').replace('pptx','ppt'));
+  btn.disabled=true;btn.textContent='⏳…';
+  try{
+    if(type==='xlsx')exportXlsx(D);
+    else if(type==='pdf')exportPdf(D);
+    else await exportPptx(D);
+    btn.textContent='✅ Done';
+  }catch(e){btn.textContent='❌ Error';alert('Export failed: '+e.message);}
+  setTimeout(()=>{btn.disabled=false;btn.innerHTML=lbls[type];},2500);
+}
+
+function exportXlsx(D){
+  const wb=XLSX.utils.book_new();
+  const app=(ws,n)=>XLSX.utils.book_append_sheet(wb,ws,n.slice(0,31));
+  const s1=XLSX.utils.aoa_to_sheet([['NEXUS ERP Dashboard'],['Department',(D.department||'').toUpperCase()],['Title',D.title||''],['Period',D.period||''],['Generated',D.generatedAt||''],[],['EXECUTIVE SUMMARY'],[D.executiveSummary||''],[],['CFO NARRATIVE'],[D.narrative||'']]);
+  s1['!cols']=[{wch:20},{wch:90}];app(s1,'Executive Summary');
+  const s2=XLSX.utils.aoa_to_sheet([['#','Metric','Value','Unit','Trend','Change'],...(D.kpis||[]).map((k,i)=>[i+1,k.label,k.value,k.unit,k.trend,k.change])]);
+  s2['!cols']=[{wch:4},{wch:30},{wch:16},{wch:12},{wch:10},{wch:16}];app(s2,'KPIs');
+  const cr=[['Chart','Label','Value','Secondary']];
+  (D.charts||[]).forEach(c=>{(c.data||[]).forEach(d=>cr.push([c.title,d.name,d.value,d.secondary!=null?d.secondary:'']));cr.push([]);});
+  const s3=XLSX.utils.aoa_to_sheet(cr);s3['!cols']=[{wch:30},{wch:22},{wch:16},{wch:16}];app(s3,'Chart Data');
+  const s4=XLSX.utils.aoa_to_sheet([['TYPE','INSIGHT'],...(D.insights||[]).map(i=>[i.type.toUpperCase(),(i.icon||'')+' '+i.text]),[],['RECOMMENDATIONS'],...(D.recommendations||[]).map((r,i)=>['#'+(i+1),r])]);
+  s4['!cols']=[{wch:16},{wch:90}];app(s4,'Insights & Recs');
+  XLSX.writeFile(wb,'nexus-'+(D.department||'report')+'-'+Date.now()+'.xlsx');
+}
+
+function exportPdf(D){
+  const dept=DEPTS.find(d=>d.id===D.department)||DEPTS[0];
+  const kH=(D.kpis||[]).map((k,i)=>'<div style="display:inline-block;vertical-align:top;width:calc(25% - 12px);margin:6px;background:#f0f7ff;border-radius:10px;padding:14px 12px;border-top:3px solid '+PAL[i%12]+'"><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#6b7280;margin-bottom:5px">'+k.label+'</div><div style="font-size:21px;font-weight:800;color:#111">'+k.value+'</div><div style="font-size:11px;margin-top:3px;font-weight:700;color:'+(k.trend==='up'?'#10b981':k.trend==='down'?'#ef4444':'#6b7280')+'">'+(k.trend==='up'?'▲':k.trend==='down'?'▼':'→')+' '+k.change+'</div></div>').join('');
+  const iH=(D.insights||[]).map(ins=>'<div style="padding:9px 13px;margin:5px 0;border-left:3px solid '+(ins.type==='positive'?'#10b981':ins.type==='negative'?'#ef4444':ins.type==='alert'?'#f97316':'#3b82f6')+';background:#f9fafb;border-radius:0 7px 7px 0;font-size:12px;line-height:1.6"><b style="font-size:9px;text-transform:uppercase;color:'+(ins.type==='positive'?'#10b981':ins.type==='negative'?'#ef4444':ins.type==='alert'?'#f97316':'#3b82f6')+'">'+ins.type+'</b><p style="margin:2px 0 0;color:#374151">'+(ins.icon||'📊')+' '+ins.text+'</p></div>').join('');
+  const rH=(D.recommendations||[]).map((r,i)=>'<div style="display:flex;gap:9px;padding:9px 11px;margin:5px 0;background:#f0fdf4;border-radius:7px;font-size:12px"><span style="background:#10b981;color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;flex-shrink:0">'+(i+1)+'</span><span>'+r+'</span></div>').join('');
+  const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+D.title+'</title><style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;color:#111;font-size:13px}.w{max-width:1040px;margin:0 auto;padding:36px 42px}h2{font-size:14px;font-weight:700;color:#1d4ed8;margin:20px 0 9px;border-bottom:1.5px solid #dbeafe;padding-bottom:4px}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.np{display:none}@page{margin:1.2cm;size:A4}}</style></head><body><div class="w"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;padding-bottom:16px;border-bottom:3px solid #1d4ed8"><div><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#6b7280">'+dept.icon+' '+dept.label.toUpperCase()+'</div><h1 style="margin:4px 0;font-size:22px;font-weight:800">'+D.title+'</h1><div style="color:#6b7280;font-size:11px">Period: '+D.period+' · '+D.generatedAt+'</div></div><div style="background:#1d4ed8;color:#fff;padding:12px 18px;border-radius:9px;text-align:center"><div style="font-size:9px;opacity:.8">NEXUS ERP</div><div style="font-size:15px;font-weight:800">AI REPORT</div></div></div><div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:14px 17px;margin-bottom:18px;font-size:13px;line-height:1.8"><b>Executive Summary:</b> '+D.executiveSummary+'</div><h2>Key Performance Indicators</h2><div>'+kH+'</div><div style="clear:both;height:8px"></div><h2>AI Insights</h2>'+iH+'<h2>Recommendations</h2>'+rH+'<h2>CFO Narrative</h2><p style="line-height:1.9;background:#f9fafb;padding:13px;border-radius:8px">'+D.narrative+'</p><div style="margin-top:32px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;display:flex;justify-content:space-between"><span>NEXUS ERP · Power BI × AI</span><span>'+D.generatedAt+'</span></div></div><div class="np" style="text-align:center;padding:16px;background:#f3f4f6;border-top:1px solid #e5e7eb"><button onclick="window.print()" style="padding:11px 26px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-right:8px">🖨️ Save as PDF</button><button onclick="window.close()" style="padding:11px 18px;background:#e5e7eb;color:#374151;border:none;border-radius:8px;cursor:pointer">Close</button></div></body></html>';
+  const w=window.open('','_blank','width=1100,height=800');
+  if(w){w.document.write(html);w.document.close();}
+  else alert('Pop-up blocked — allow pop-ups for this site and retry.');
+}
+
+async function exportPptx(D){
+  await loadScriptCDN('https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundled.js');
+  if(!window.PptxGenJS)throw new Error('PptxGenJS failed to load');
+  const pptx=new window.PptxGenJS();pptx.layout='LAYOUT_WIDE';pptx.title=D.title;
+  const dept=DEPTS.find(d=>d.id===D.department)||DEPTS[0];
+  const BG='060A12',CD='0C1422',AC='00D4FF',WH='E2EBF6',MU='4A6585',GR='10B981',WA='F59E0B';
+  const CC=['00D4FF','7C3AED','10B981','F59E0B','F97316','EF4444','06D6A0','3B82F6'];
+  const hdr=(s,lbl,col)=>{s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:13.33,h:1.05,fill:{color:CD},line:{color:CD}});s.addText(lbl,{x:.45,y:.15,w:12,fontSize:10,bold:true,color:col||AC,charSpacing:5});s.addText(D.title,{x:.45,y:.45,w:12,fontSize:17,bold:true,color:WH});};
+  // Slide 1
+  const s1=pptx.addSlide();s1.background={color:BG};
+  s1.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:'100%',fill:{color:CD},line:{color:CD}});
+  s1.addShape(pptx.ShapeType.rect,{x:0,y:3.65,w:13.33,h:.05,fill:{color:AC},line:{color:AC}});
+  s1.addShape(pptx.ShapeType.rect,{x:0,y:0,w:.12,h:7.5,fill:{color:AC},line:{color:AC}});
+  s1.addText('NEXUS ERP · AI DASHBOARD INTELLIGENCE',{x:.35,y:.3,w:10,fontSize:10,bold:true,color:AC,charSpacing:5});
+  s1.addText(dept.icon+'  '+dept.label.toUpperCase(),{x:.35,y:.65,w:9,fontSize:10,bold:true,color:MU,charSpacing:3});
+  s1.addText(D.title,{x:.35,y:1.1,w:11.2,fontSize:32,bold:true,color:WH});
+  s1.addText('Period: '+D.period+'  ·  '+D.generatedAt,{x:.35,y:3.2,w:9,fontSize:11,color:MU});
+  s1.addText(D.summary||'',{x:.35,y:4.05,w:12.5,fontSize:13,color:'8BA5C0',lineSpacingMultiple:1.45});
+  // Slide 2: KPIs
+  const s2=pptx.addSlide();s2.background={color:BG};hdr(s2,'KEY PERFORMANCE INDICATORS',AC);
+  (D.kpis||[]).slice(0,8).forEach((k,i)=>{
+    const col2=i%4,row=Math.floor(i/4),x=.3+col2*3.15,y=1.2+row*1.55;
+    s2.addShape(pptx.ShapeType.rect,{x,y,w:2.95,h:1.38,fill:{color:CD},line:{color:'1A2B40',width:.8}});
+    s2.addShape(pptx.ShapeType.rect,{x,y,w:2.95,h:.05,fill:{color:CC[i%8]},line:{color:CC[i%8]}});
+    s2.addText((k.label||'').toUpperCase(),{x:x+.14,y:y+.12,w:2.67,fontSize:7.5,bold:true,color:MU,charSpacing:1.5});
+    s2.addText(k.value+(k.unit&&k.unit!=='units'?' '+k.unit:''),{x:x+.12,y:y+.33,w:2.71,fontSize:21,bold:true,color:WH});
+    s2.addText((k.trend==='up'?'▲':k.trend==='down'?'▼':'→')+'  '+(k.change||''),{x:x+.12,y:y+1.04,w:2.71,fontSize:11,bold:true,color:k.trend==='up'?GR:k.trend==='down'?'EF4444':MU});
+  });
+  // Slide 3: Chart tables
+  const s3=pptx.addSlide();s3.background={color:BG};hdr(s3,'ANALYTICS & CHART DATA','7C3AED');
+  [{x:.3,y:1.15},{x:6.85,y:1.15},{x:.3,y:4.1},{x:6.85,y:4.1}].forEach((pos,ci)=>{
+    const chart=(D.charts||[])[ci];if(!chart)return;
+    s3.addShape(pptx.ShapeType.rect,{x:pos.x,y:pos.y,w:6.2,h:2.75,fill:{color:CD},line:{color:'1A2B40',width:.8}});
+    s3.addText(chart.title||'',{x:pos.x+.18,y:pos.y+.13,w:5.84,fontSize:11,bold:true,color:WH});
+    const hRow=[{text:'Category',options:{fontSize:8,bold:true,color:AC,fill:{color:'0D1828'},border:{pt:.5,color:'1A2B40'}}},{text:'Value',options:{fontSize:8,bold:true,color:AC,fill:{color:'0D1828'},align:'right',border:{pt:.5,color:'1A2B40'}}}];
+    const dRows=(chart.data||[]).slice(0,7).map((d,ri)=>[{text:String(d.name||''),options:{fontSize:8,color:'8BA5C0',fill:{color:ri%2===0?CD:'0D1828'},border:{pt:.5,color:'1A2B40'}}},{text:String(d.value||''),options:{fontSize:8.5,bold:true,color:WH,align:'right',fill:{color:ri%2===0?CD:'0D1828'},border:{pt:.5,color:'1A2B40'}}}]);
+    if(dRows.length)s3.addTable([hRow,...dRows],{x:pos.x+.18,y:pos.y+.5,w:5.84,rowH:.27,border:{pt:.5,color:'1A2B40'}});
+  });
+  // Slide 4: Insights
+  const s4=pptx.addSlide();s4.background={color:BG};hdr(s4,'AI-DETECTED INSIGHTS',GR);
+  [{x:.3,y:1.15},{x:6.85,y:1.15},{x:.3,y:2.65},{x:6.85,y:2.65},{x:.3,y:4.15},{x:6.85,y:4.15}].forEach((pos,i)=>{
+    const ins=(D.insights||[])[i];if(!ins)return;
+    const bc=ins.type==='positive'?GR:ins.type==='negative'?'EF4444':ins.type==='alert'?WA:AC;
+    s4.addShape(pptx.ShapeType.rect,{x:pos.x,y:pos.y,w:6.2,h:1.25,fill:{color:'0E1C2F'},line:{color:bc,width:1.5}});
+    s4.addShape(pptx.ShapeType.rect,{x:pos.x,y:pos.y,w:.07,h:1.25,fill:{color:bc},line:{color:bc}});
+    s4.addText((ins.type||'info').toUpperCase(),{x:pos.x+.22,y:pos.y+.1,w:1.8,fontSize:8,bold:true,color:bc,charSpacing:2});
+    s4.addText((ins.icon||'')+'  '+(ins.text||''),{x:pos.x+.2,y:pos.y+.35,w:5.85,fontSize:10,color:'C0D0E0',lineSpacingMultiple:1.35});
+  });
+  // Slide 5: Recommendations
+  const s5=pptx.addSlide();s5.background={color:BG};hdr(s5,'STRATEGIC RECOMMENDATIONS',WA);
+  (D.recommendations||[]).slice(0,5).forEach((rec,i)=>{
+    const y=1.18+i*1.1;
+    s5.addShape(pptx.ShapeType.rect,{x:.3,y,w:12.73,h:1.0,fill:{color:CD},line:{color:'1A2B40'}});
+    s5.addShape(pptx.ShapeType.ellipse,{x:.44,y:y+.22,w:.54,h:.54,fill:{color:'0D2144'},line:{color:AC,width:1.5}});
+    s5.addText(String(i+1),{x:.44,y:y+.25,w:.54,fontSize:14,bold:true,color:AC,align:'center'});
+    s5.addText(rec,{x:1.15,y:y+.18,w:11.68,fontSize:12,color:'C0D0E0',lineSpacingMultiple:1.35});
+  });
+  // Slide 6: CFO close
+  const s6=pptx.addSlide();s6.background={color:'06080F'};
+  s6.addShape(pptx.ShapeType.rect,{x:0,y:0,w:13.33,h:3.75,fill:{color:'0C1120'},line:{color:'0C1120'}});
+  s6.addShape(pptx.ShapeType.rect,{x:0,y:3.75,w:13.33,h:.05,fill:{color:AC},line:{color:AC}});
+  s6.addText('CFO EXECUTIVE NARRATIVE',{x:.5,y:.3,w:12,fontSize:10,bold:true,color:AC,charSpacing:6});
+  s6.addText(D.executiveSummary||'',{x:.5,y:.68,w:12.33,fontSize:13,color:WH,lineSpacingMultiple:1.6});
+  s6.addText('NEXUS ERP · AI Intelligence · CONFIDENTIAL',{x:.5,y:7.1,w:12.33,fontSize:8.5,color:'2A3A50',align:'center'});
+  await pptx.writeFile({fileName:'nexus-'+(D.department||'report')+'-deck-'+Date.now()+'.pptx'});
+}
+
+// ── Reset ──────────────────────────────────────────────────────────
+function resetApp(){
+  Object.keys(S.ci).forEach(id=>destroyChart(id));
+  Object.assign(S,{dept:null,file:null,rawText:'',dash:null,ci:{},ct:{},tab:'overview',insF:'all',pct:false,ksel:null,vcat:'all',sidx:0,range:100});
+  $('paste').value='';$('file-ok').classList.remove('on');$('finput').value='';
+  $('dept-row').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+  $('gen-btn').disabled=true;$('new-btn').style.display='none';
+  showErr('');showScr('input');
 }
 </script>
 </body>
